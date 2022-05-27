@@ -20,19 +20,17 @@ GTEST_TEST(GridClassTest, TestSetGet) {
     double tmpscaling = 1.0;
     // Test the geometry of the grid
     EXPECT_EQ(grid.get_num_gridpt(), 72);
-    EXPECT_TRUE(CompareMatrices(grid.get_num_gridpt_1D(), Vector3<int>(6, 3, 4),
-                                kEps));
+    EXPECT_TRUE(CompareMatrices(grid.get_num_gridpt_1D(),
+                                Vector3<int>(6, 3, 4)));
     EXPECT_EQ(grid.get_h(), 1.0);
-    EXPECT_TRUE(CompareMatrices(grid.get_bottom_corner(), bottom_corner,
-                                kEps));
+    EXPECT_TRUE(CompareMatrices(grid.get_bottom_corner(), bottom_corner));
 
     // Check whether the grid point positions are populated correctly
     for (int k = 0; k < 4; ++k) {
     for (int j = 0; j < 3; ++j) {
     for (int i = 0; i < 6; ++i) {
         EXPECT_TRUE(CompareMatrices(grid.get_position(i, j, k),
-                                    Vector3<double>(i, j, k),
-                                    kEps));
+                                    Vector3<double>(i, j, k)));
         // Randomly put some values in
         tmpscaling = 20.0*k + 10.0*j + i;
         grid.set_mass(i, j, k, tmpscaling);
@@ -47,18 +45,14 @@ GTEST_TEST(GridClassTest, TestSetGet) {
     }
 
     EXPECT_TRUE(CompareMatrices(grid.get_velocity(1, 1, 1),
-                                Vector3<double>(31.0, -31.0, 31.0),
-                                kEps));
+                                Vector3<double>(31.0, -31.0, 31.0)));
     EXPECT_TRUE(CompareMatrices(grid.get_force(1, 1, 1),
-                                Vector3<double>(-31.0, 31.0, -31.0),
-                                kEps));
+                                Vector3<double>(-31.0, 31.0, -31.0)));
     EXPECT_EQ(grid.get_mass(1, 1, 1), 31.0);
     EXPECT_TRUE(CompareMatrices(grid.get_velocity(4, 2, 2),
-                                Vector3<double>(64.0, -64.0, 64.0),
-                                kEps));
+                                Vector3<double>(64.0, -64.0, 64.0)));
     EXPECT_TRUE(CompareMatrices(grid.get_force(4, 2, 2),
-                                Vector3<double>(-64.0, 64.0, -64.0),
-                                kEps));
+                                Vector3<double>(-64.0, 64.0, -64.0)));
     EXPECT_EQ(grid.get_mass(4, 2, 2), 64.0);
 
     // Test on a new grid
@@ -69,31 +63,30 @@ GTEST_TEST(GridClassTest, TestSetGet) {
 
     // Test the geometry of the grid
     EXPECT_EQ(grid.get_num_gridpt(), 27);
-    EXPECT_TRUE(CompareMatrices(grid.get_num_gridpt_1D(), Vector3<int>(3, 3, 3),
-                                kEps));
+    EXPECT_TRUE(CompareMatrices(grid.get_num_gridpt_1D(),
+                                Vector3<int>(3, 3, 3)));
     EXPECT_EQ(grid.get_h(), 0.5);
-    EXPECT_TRUE(CompareMatrices(grid.get_bottom_corner(), bottom_corner,
-                                kEps));
+    EXPECT_TRUE(CompareMatrices(grid.get_bottom_corner(), bottom_corner));
 
     // Check whether the grid point positions are populated correctly
     EXPECT_TRUE(CompareMatrices(grid.get_position(-2, 2, -2),
-                                Vector3<double>(-1.0, 1.0, -1.0), kEps));
+                                Vector3<double>(-1.0, 1.0, -1.0)));
     EXPECT_TRUE(CompareMatrices(grid.get_position(-1, 2, -2),
-                                Vector3<double>(-0.5, 1.0, -1.0), kEps));
+                                Vector3<double>(-0.5, 1.0, -1.0)));
     EXPECT_TRUE(CompareMatrices(grid.get_position(-2, 3, -2),
-                                Vector3<double>(-1.0, 1.5, -1.0), kEps));
+                                Vector3<double>(-1.0, 1.5, -1.0)));
     EXPECT_TRUE(CompareMatrices(grid.get_position(-1, 3, -2),
-                                Vector3<double>(-0.5, 1.5, -1.0), kEps));
+                                Vector3<double>(-0.5, 1.5, -1.0)));
     EXPECT_TRUE(CompareMatrices(grid.get_position(-2, 2, -1),
-                                Vector3<double>(-1.0, 1.0, -0.5), kEps));
+                                Vector3<double>(-1.0, 1.0, -0.5)));
     EXPECT_TRUE(CompareMatrices(grid.get_position(-1, 2, -1),
-                                Vector3<double>(-0.5, 1.0, -0.5), kEps));
+                                Vector3<double>(-0.5, 1.0, -0.5)));
     EXPECT_TRUE(CompareMatrices(grid.get_position(-2, 3, -1),
-                                Vector3<double>(-1.0, 1.5, -0.5), kEps));
+                                Vector3<double>(-1.0, 1.5, -0.5)));
     EXPECT_TRUE(CompareMatrices(grid.get_position(-1, 3, -1),
-                                Vector3<double>(-0.5, 1.5, -0.5), kEps));
+                                Vector3<double>(-0.5, 1.5, -0.5)));
     EXPECT_TRUE(CompareMatrices(grid.get_position(0, 4, 0),
-                                Vector3<double>(0.0, 2.0, 0.0), kEps));
+                                Vector3<double>(0.0, 2.0, 0.0)));
 }
 
 GTEST_TEST(GridClassTest, TestExpand1DIndex) {
@@ -109,7 +102,7 @@ GTEST_TEST(GridClassTest, TestExpand1DIndex) {
     for (int j = 0; j < 3; ++j) {
     for (int i = 0; i < 6; ++i) {
         EXPECT_TRUE(CompareMatrices(grid.Expand1DIndex(count++),
-                                    Vector3<int>(i, j, k), kEps));
+                                    Vector3<int>(i, j, k)));
     }
     }
     }
@@ -126,7 +119,7 @@ GTEST_TEST(GridClassTest, TestExpand1DIndex) {
     for (int j = bottom_corner(1); j < bottom_corner(1)+num_gridpt_1D(1); ++j) {
     for (int i = bottom_corner(0); i < bottom_corner(0)+num_gridpt_1D(0); ++i) {
         EXPECT_TRUE(CompareMatrices(grid.Expand1DIndex(count++),
-                                    Vector3<int>(i, j, k), kEps));
+                                    Vector3<int>(i, j, k)));
     }
     }
     }
@@ -144,10 +137,108 @@ GTEST_TEST(GridClassTest, TestGetIndices) {
     for (const auto& [index_flat, index_3d] : grid.get_indices()) {
         EXPECT_EQ(count++, index_flat);
         EXPECT_TRUE(CompareMatrices(index_3d,
-                                    grid.Expand1DIndex(index_flat), kEps));
+                                    grid.Expand1DIndex(index_flat)));
     }
 }
 
+GTEST_TEST(GridClassTest, TestResetStatesAndAccumulationAndRescale) {
+    Vector3<int> num_gridpt_1D = {6, 3, 4};
+    double h = 1.0;
+    Vector3<int> bottom_corner  = {0, 0, 0};
+    Grid grid = Grid(num_gridpt_1D, h, bottom_corner);
+    double tmpscaling = 1.0;
+    // Test the geometry of the grid
+    EXPECT_EQ(grid.get_num_gridpt(), 72);
+    EXPECT_TRUE(CompareMatrices(grid.get_num_gridpt_1D(),
+                                Vector3<int>(6, 3, 4)));
+    EXPECT_EQ(grid.get_h(), 1.0);
+    EXPECT_TRUE(CompareMatrices(grid.get_bottom_corner(), bottom_corner));
+
+    for (int k = 0; k < 4; ++k) {
+    for (int j = 0; j < 3; ++j) {
+    for (int i = 0; i < 6; ++i) {
+        // Randomly put some values in
+        tmpscaling = 1.2*k + 0.3*j + i;
+        grid.set_mass(i, j, k, tmpscaling);
+        grid.set_velocity(i, j, k, Vector3<double>(tmpscaling,
+                                                  -tmpscaling,
+                                                   tmpscaling));
+        grid.set_force(i, j, k, Vector3<double>(-tmpscaling,
+                                                 tmpscaling,
+                                                -tmpscaling));
+    }
+    }
+    }
+
+    for (int k = 1; k < 4; ++k) {
+    for (int j = 1; j < 3; ++j) {
+    for (int i = 1; i < 6; ++i) {
+        EXPECT_TRUE(!CompareMatrices(grid.get_velocity(i, j, k),
+                                     Vector3<double>::Zero()));
+    }
+    }
+    }
+
+    grid.ResetStates();
+
+    // Test ResetStates sets all states to zero
+    for (int k = 0; k < 4; ++k) {
+    for (int j = 0; j < 3; ++j) {
+    for (int i = 0; i < 6; ++i) {
+        EXPECT_TRUE(CompareMatrices(grid.get_velocity(i, j, k),
+                                    Vector3<double>::Zero()));
+        EXPECT_TRUE(CompareMatrices(grid.get_force(i, j, k),
+                                    Vector3<double>::Zero()));
+        EXPECT_EQ(grid.get_mass(i, j, k), 0.0);
+    }
+    }
+    }
+
+    // Test accumulation
+    Vector3<int> grid_index;
+    for (int k = 0; k < 4; ++k) {
+    for (int j = 0; j < 3; ++j) {
+    for (int i = 0; i < 6; ++i) {
+        grid_index(0) = i;
+        grid_index(1) = j;
+        grid_index(2) = k;
+        // Randomly put some values in
+        grid.AccumulateMass(i, j, k, 1.0);
+        grid.AccumulateVelocity(i, j, k, Vector3<double>(1.0, -1.0, 1.0));
+        grid.AccumulateForce(i, j, k, Vector3<double>(-1.0, -1.0, 1.0));
+        EXPECT_TRUE(CompareMatrices(grid.get_velocity(i, j, k),
+                                    Vector3<double>(1.0, -1.0, 1.0), kEps));
+        EXPECT_TRUE(CompareMatrices(grid.get_force(i, j, k),
+                                    Vector3<double>(-1.0, -1.0, 1.0), kEps));
+        EXPECT_EQ(grid.get_mass(i, j, k), 1.0);
+
+        grid.AccumulateMass(grid_index, 1.2);
+        grid.AccumulateVelocity(grid_index, Vector3<double>(1.2, -1.2, 1.2));
+        grid.AccumulateForce(grid_index, Vector3<double>(-1.2, -1.2, 1.2));
+        EXPECT_TRUE(CompareMatrices(grid.get_velocity(i, j, k),
+                                    Vector3<double>(2.2, -2.2, 2.2), kEps));
+        EXPECT_TRUE(CompareMatrices(grid.get_force(i, j, k),
+                                    Vector3<double>(-2.2, -2.2, 2.2), kEps));
+        EXPECT_EQ(grid.get_mass(i, j, k), 2.2);
+    }
+    }
+    }
+
+    // Test rescale
+    grid.RescaleVelocities();
+    for (int k = 0; k < 4; ++k) {
+    for (int j = 0; j < 3; ++j) {
+    for (int i = 0; i < 6; ++i) {
+        // Randomly put some values in
+        EXPECT_TRUE(CompareMatrices(grid.get_velocity(i, j, k),
+                                    Vector3<double>(1.0, -1.0, 1.0), kEps));
+        EXPECT_TRUE(CompareMatrices(grid.get_force(i, j, k),
+                                    Vector3<double>(-2.2, -2.2, 2.2), kEps));
+        EXPECT_EQ(grid.get_mass(i, j, k), 2.2);
+    }
+    }
+    }
+}
 
 }  // namespace
 }  // namespace internal

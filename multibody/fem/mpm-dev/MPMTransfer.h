@@ -2,7 +2,9 @@
 
 #include <algorithm>
 #include <array>
+#include <memory>
 #include <numeric>
+#include <tuple>
 #include <vector>
 
 #include "drake/common/eigen_types.h"
@@ -26,8 +28,25 @@ class MPMTransfer {
     // otherwise the results will be incorrect.
     void SetUpTransfer(const Grid& grid, Particles* particles);
 
+    // Transfer masses, velocities, and Kirchhoff stresses on the particles
+    // to masses, velocities, and forces on the grid
+    void TransferParticlesToGrid(const Particles& particles, Grid* grid);
+
  private:
     friend class MPMTransferTest;
+
+    struct GridState {
+        double mass;
+        Vector3<double> velocity;
+        Vector3<double> force;
+
+        void reset() {
+            mass = 0.0;
+            velocity.setZero();
+            force.setZero();
+        }
+    };
+
     // Sort the particles according to the batch number, in increasing order.
     // As below shown, o denotes the grid points, $ denotes the batch centered
     // around the grid point. # of batch = # of grid points
@@ -70,6 +89,20 @@ class MPMTransfer {
     void EvalBasisOnBatch(int p, const Vector3<double>& xp, const Grid& grid,
                           const Vector3<int>& batch_index_3d,
                           const std::vector<BSpline>& bases);
+
+    // At a particular particle p in batch with batch_index_3d, transfer
+    // particle states (m, mv, tau) to (m, mv, f). Note that we temporarily
+    // store the momentum into particles' velocities, in TransferParticlesToGrid
+    // we will scale the momentum with the updated mass to get the velocities.
+    void AccumulateGridStatesOnBatch(int p, double mass_p,
+                                     double reference_volume_p,
+                                     const Vector3<double>& momentum_p,
+                                     const Matrix3<double>& tau_p,
+                                     std::array<GridState, 27>* sum_local);
+
+    void WriteBatchStateToGrid(const Vector3<int>& batch_index_3d,
+                               const std::array<GridState, 27>& sum_local,
+                               Grid* grid);
 
     // Given the position of a particle xp, calculate the index of the batch
     // this particle is in.

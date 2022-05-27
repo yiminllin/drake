@@ -92,11 +92,57 @@ void Grid::set_force(int i, int j, int k, const Vector3<double>& force) {
     forces_[Reduce3DIndex(i, j, k)] = force;
 }
 
+void Grid::AccumulateVelocity(int i, int j, int k,
+                                        const Vector3<double>& velocity) {
+    DRAKE_ASSERT(in_index_range(i, j, k));
+    velocities_[Reduce3DIndex(i, j, k)] += velocity;
+}
+
+void Grid::AccumulateMass(int i, int j, int k, double mass) {
+    DRAKE_ASSERT(in_index_range(i, j, k));
+    masses_[Reduce3DIndex(i, j, k)] += mass;
+}
+
+void Grid::AccumulateForce(int i, int j, int k, const Vector3<double>& force) {
+    DRAKE_ASSERT(in_index_range(i, j, k));
+    forces_[Reduce3DIndex(i, j, k)] += force;
+}
+
+void Grid::AccumulateVelocity(const Vector3<int>& index_3d,
+                                        const Vector3<double>& velocity) {
+    AccumulateVelocity(index_3d(0), index_3d(1), index_3d(2), velocity);
+}
+
+void Grid::AccumulateMass(const Vector3<int>& index_3d, double mass) {
+    AccumulateMass(index_3d(0), index_3d(1), index_3d(2), mass);
+}
+
+void Grid::AccumulateForce(const Vector3<int>& index_3d,
+                           const Vector3<double>& force) {
+    AccumulateForce(index_3d(0), index_3d(1), index_3d(2), force);
+}
+
+void Grid::RescaleVelocities() {
+    for (int i = 0; i < num_gridpt_; ++i) {
+        velocities_[i] = velocities_[i] / masses_[i];
+    }
+}
+
+void Grid::ResetStates() {
+    std::fill(masses_.begin(), masses_.end(), 0.0);
+    std::fill(velocities_.begin(), velocities_.end(), Vector3<double>::Zero());
+    std::fill(forces_.begin(), forces_.end(), Vector3<double>::Zero());
+}
+
 int Grid::Reduce3DIndex(int i, int j, int k) const {
     DRAKE_ASSERT(in_index_range(i, j, k));
     return (k-bottom_corner_(2))*(num_gridpt_1D_(0)*num_gridpt_1D_(1))
          + (j-bottom_corner_(1))*num_gridpt_1D_(0)
          + (i-bottom_corner_(0));
+}
+
+int Grid::Reduce3DIndex(const Vector3<int>& index_3d) const {
+    return Reduce3DIndex(index_3d(0), index_3d(1), index_3d(2));
 }
 
 Vector3<int> Grid::Expand1DIndex(int idx) const {
@@ -117,6 +163,10 @@ bool Grid::in_index_range(int i, int j, int k) const {
             (i >= bottom_corner_(0)) &&
             (j >= bottom_corner_(1)) &&
             (k >= bottom_corner_(2)));
+}
+
+bool Grid::in_index_range(const Vector3<int>& index_3d) const {
+    return in_index_range(index_3d(0), index_3d(1), index_3d(2));
 }
 
 }  // namespace mpm
