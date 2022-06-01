@@ -169,6 +169,12 @@ bool Grid::in_index_range(const Vector3<int>& index_3d) const {
     return in_index_range(index_3d(0), index_3d(1), index_3d(2));
 }
 
+void Grid::UpdateVelocity(double dt) {
+    for (int i = 0; i < num_gridpt_; ++i) {
+        velocities_[i] += dt*forces_[i]/masses_[i];
+    }
+}
+
 }  // namespace mpm
 }  // namespace multibody
 }  // namespace drake

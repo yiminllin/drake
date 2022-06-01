@@ -163,6 +163,19 @@ void Particles::AddParticle(const Vector3<double>& position,
     num_particles_++;
 }
 
+void Particles::UpdateKirchhoffStresses(const CorotatedModel& corotated_model) {
+    for (int p = 0; p < num_particles_; ++p) {
+        corotated_model.CalcKirchhoffStress(deformation_gradients_[p],
+                                           &kirchhoff_stresses_[p]);
+    }
+}
+
+void Particles::AdvectParticles(double dt) {
+    for (int p = 0; p < num_particles_; ++p) {
+        positions_[p] += dt*velocities_[p];
+    }
+}
+
 }  // namespace mpm
 }  // namespace multibody
 }  // namespace drake

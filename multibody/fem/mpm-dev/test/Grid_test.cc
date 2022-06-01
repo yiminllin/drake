@@ -240,6 +240,48 @@ GTEST_TEST(GridClassTest, TestResetStatesAndAccumulationAndRescale) {
     }
 }
 
+GTEST_TEST(GridClassTest, TestUpdateVelocity) {
+    Vector3<int> num_gridpt_1D = {6, 3, 4};
+    double h = 1.0;
+    Vector3<int> bottom_corner  = {0, 0, 0};
+    Grid grid = Grid(num_gridpt_1D, h, bottom_corner);
+    double tmpscaling = 1.0;
+    double dt = 0.2;
+
+    for (int k = 0; k < 4; ++k) {
+    for (int j = 0; j < 3; ++j) {
+    for (int i = 0; i < 6; ++i) {
+        // Randomly put some values in
+        tmpscaling = 1.2*k + 0.3*j + i;
+        grid.set_mass(i, j, k, tmpscaling);
+        grid.set_velocity(i, j, k, Vector3<double>(tmpscaling,
+                                                  -tmpscaling,
+                                                   tmpscaling));
+        grid.set_force(i, j, k, Vector3<double>(-tmpscaling,
+                                                 tmpscaling,
+                                                -tmpscaling));
+    }
+    }
+    }
+
+    grid.UpdateVelocity(dt);
+
+    // v^{n+1} = v^n + dt*f^n/m = [t, -t, t] + dt*[-t, t, -t]/t
+    //                          = [t, -t, t] + [-dt, dt, -dt]
+    //                          = [t-dt, -t+dt, t-dt]
+    // t: tmpscaling
+    for (int k = 1; k < 4; ++k) {
+    for (int j = 1; j < 3; ++j) {
+    for (int i = 1; i < 6; ++i) {
+        tmpscaling = 1.2*k + 0.3*j + i;
+        EXPECT_TRUE(CompareMatrices(grid.get_velocity(i, j, k),
+            Vector3<double>(tmpscaling-dt, -tmpscaling+dt, tmpscaling-dt),
+            kEps));
+    }
+    }
+    }
+}
+
 }  // namespace
 }  // namespace internal
 }  // namespace mpm

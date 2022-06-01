@@ -66,6 +66,7 @@ drake_cc_library(
         "Particles.h",
     ],
     deps = [
+        ":CorotatedModel",
         "//common:essential",
     ],
 )
@@ -146,6 +147,7 @@ drake_cc_googletest(
     deps = [
         ":Particles",
         "//common/test_utilities:eigen_matrix_compare",
+        "//math:geometric_transform",
     ],
 )
 

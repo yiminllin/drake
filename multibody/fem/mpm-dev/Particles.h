@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "drake/common/eigen_types.h"
+#include "drake/multibody/fem/mpm-dev/CorotatedModel.h"
 
 namespace drake {
 namespace multibody {
@@ -67,6 +68,14 @@ class Particles {
                      double mass, double reference_volume,
                      const Matrix3<double>& deformation_gradient,
                      const Matrix3<double>& kirchhoff_stress);
+
+    // Assume the deformation gradient is updated, update Kirchhoff stress tau
+    // given the constitutive relation
+    void UpdateKirchhoffStresses(const CorotatedModel& corotated_model);
+
+    // Particle advection using the updated velocities, assuming they are
+    // already updated in the member variables.
+    void AdvectParticles(double dt);
 
  private:
     int num_particles_;

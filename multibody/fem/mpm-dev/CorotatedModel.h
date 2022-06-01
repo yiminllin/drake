@@ -15,14 +15,14 @@ class CorotatedModel {
 
     // First Piola Kirchhoff stress density: P = dpsi/dF
     void CalcFirstPiolaKirchhoffStress(
-        const Matrix3<double>& F, EigenPtr<Matrix3<double>> P);
+        const Matrix3<double>& F, EigenPtr<Matrix3<double>> P) const;
 
     // Kirchhoff stress density: tau = P F^T = dpsi/dF F^T
     void CalcKirchhoffStress(const Matrix3<double>& F,
-                             EigenPtr<Matrix3<double>> tau);
+                             EigenPtr<Matrix3<double>> tau) const;
     void CalcFirstPiolaKirchhoffStressAndKirchhoffStress(
         const Matrix3<double>& F, EigenPtr<Matrix3<double>> P,
-        EigenPtr<Matrix3<double>> tau);
+        EigenPtr<Matrix3<double>> tau) const;
 
  private:
     double mu_;                         // Parameters in defining

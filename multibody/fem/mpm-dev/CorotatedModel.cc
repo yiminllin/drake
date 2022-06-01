@@ -11,7 +11,7 @@ CorotatedModel::CorotatedModel(double E, double nu):
     }
 
 void CorotatedModel::CalcFirstPiolaKirchhoffStress(
-        const Matrix3<double>& F, EigenPtr<Matrix3<double>> P) {
+        const Matrix3<double>& F, EigenPtr<Matrix3<double>> P) const {
     Matrix3<double> R, S, JFinvT;
     double J = F.determinant();
     fem::internal::PolarDecompose<double>(F, &R, &S);
@@ -20,7 +20,7 @@ void CorotatedModel::CalcFirstPiolaKirchhoffStress(
 }
 
 void CorotatedModel::CalcKirchhoffStress(const Matrix3<double>& F,
-                                         EigenPtr<Matrix3<double>> tau) {
+                                         EigenPtr<Matrix3<double>> tau) const {
     Matrix3<double> R, S;
     double J = F.determinant();
     fem::internal::PolarDecompose<double>(F, &R, &S);
@@ -30,7 +30,7 @@ void CorotatedModel::CalcKirchhoffStress(const Matrix3<double>& F,
 
 void CorotatedModel::CalcFirstPiolaKirchhoffStressAndKirchhoffStress(
         const Matrix3<double>& F, EigenPtr<Matrix3<double>> P,
-        EigenPtr<Matrix3<double>> tau) {
+        EigenPtr<Matrix3<double>> tau) const {
     Matrix3<double> R, S, JFinvT;
     double J = F.determinant();
     fem::internal::PolarDecompose<double>(F, &R, &S);

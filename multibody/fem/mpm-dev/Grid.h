@@ -94,6 +94,11 @@ class Grid {
     bool in_index_range(int i, int j, int k) const;
     bool in_index_range(const Vector3<int>& index_3d) const;
 
+    // Assume the explicit grid force at step n f^n is calculated and stored in
+    // the member variable, we update the velocity with the formula
+    // v^{n+1} = v^n + dt*f^n/m^n
+    void UpdateVelocity(double dt);
+
  private:
     int num_gridpt_;
     Vector3<int> num_gridpt_1D_;              // Number of grid points on the

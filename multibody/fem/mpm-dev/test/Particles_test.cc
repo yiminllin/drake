@@ -3,6 +3,8 @@
 #include <gtest/gtest.h>
 
 #include "drake/common/test_utilities/eigen_matrix_compare.h"
+#include "drake/math/roll_pitch_yaw.h"
+#include "drake/math/rotation_matrix.h"
 
 namespace drake {
 namespace multibody {
@@ -10,7 +12,9 @@ namespace mpm {
 namespace internal {
 namespace {
 
+constexpr double pi = 3.14159265358979323846;
 constexpr double kEps = 1e-14;
+constexpr double TOLERANCE = 1e-10;
 
 GTEST_TEST(ParticlesClassTest, TestAddSetGet) {
     std::vector<Vector3<double>> positions;
@@ -290,6 +294,62 @@ GTEST_TEST(ParticlesClassTest, TestReorder) {
                 kEps));
     EXPECT_TRUE(CompareMatrices(particles.get_kirchhoff_stress(2), stress2,
                 kEps));
+}
+
+GTEST_TEST(ParticlesClassTest, TestAdvectAndUpdateKirchhoffStress) {
+    std::vector<Vector3<double>> positions;
+    std::vector<Vector3<double>> velocities;
+    std::vector<double> masses;
+    std::vector<double> reference_volumes;
+    std::vector<Matrix3<double>> deformation_gradients;
+    std::vector<Matrix3<double>> kirchhoff_stresses;
+    CorotatedModel corotated_model = CorotatedModel(5.0, 0.25);
+
+    const Matrix3<double> R =
+        math::RotationMatrix<double>
+            (math::RollPitchYaw<double>(pi/2.0, pi, 3.0*pi/2.0)).matrix();
+    const Matrix3<double> S = (Matrix3<double>() <<
+            6, 1, 2,
+            1, 4, 1,
+            2, 1, 5).finished();
+    const Matrix3<double> tau_exact = (Matrix3<double>() <<
+             18724, -84,  40,
+            -84,  18764, -44,
+             40, -44,  18680).finished();
+    const Matrix3<double> F = R * S;
+
+    Vector3<double> pos1 = {1.0, 2.0, 3.0};
+    Vector3<double> vel1 = {-1.0, -2.0, -3.0};
+    double mass1 = 5.0;
+    double vol1  = 10.0;
+    Matrix3<double> F1 = F;
+    Matrix3<double> stress1 = Matrix3<double>::Zero();
+
+    Vector3<double> pos2 = {3.0, -1.0, 6.0};
+    Vector3<double> vel2 = {-9.0, 8.0, -2.0};
+    double mass2 = 7.0;
+    double vol2  = 3.0;
+    Matrix3<double> F2 = R;
+    Matrix3<double> stress2 = Matrix3<double>::Ones();
+
+    Particles particles = Particles();
+    particles.AddParticle(pos1, vel1, mass1, vol1, F1, stress1);
+    particles.AddParticle(pos2, vel2, mass2, vol2, F2, stress2);
+
+    // Advect particles
+    double dt = 0.3;
+    particles.AdvectParticles(dt);
+    EXPECT_TRUE(CompareMatrices(particles.get_position(0),
+                                Vector3<double>(0.7, 1.4, 2.1), kEps));
+    EXPECT_TRUE(CompareMatrices(particles.get_position(1),
+                                Vector3<double>(0.3, 1.4, 5.4), kEps));
+
+    // Update Kirchhoff stress
+    particles.UpdateKirchhoffStresses(corotated_model);
+    EXPECT_TRUE(CompareMatrices(particles.get_kirchhoff_stress(0),
+                                tau_exact, TOLERANCE));
+    EXPECT_TRUE(CompareMatrices(particles.get_kirchhoff_stress(1),
+                                Matrix3<double>::Zero(), TOLERANCE));
 }
 
 }  // namespace
