@@ -32,6 +32,11 @@ class MPMTransfer {
     // to masses, velocities, and forces on the grid
     void TransferParticlesToGrid(const Particles& particles, Grid* grid);
 
+    // Transfer velocities on the grids to velocities and deformation
+    // gradients on the particles
+    void TransferGridToParticles(const Grid& grid, double dt,
+                                 Particles* particles);
+
  private:
     friend class MPMTransferTest;
 
@@ -77,6 +82,11 @@ class MPMTransfer {
     // o = = = o = = = o = = = o = = = o
     // The batches are ordered in a lexiographical ordering, similar to grid
     // points.
+    // SortParticles assume particles are within the bound. We define a particle
+    // is not in bound if the particle does not lie within the grid, or the
+    // particle's position is in the boundary batches. For example, in above
+    // case, the batches that correspond to boundary grid points are boundary
+    // batches.
     void SortParticles(const Grid& grid, Particles* particles);
 
     // Update the evalutions and gradients of BSpline bases on each particle,
@@ -103,6 +113,12 @@ class MPMTransfer {
     void WriteBatchStateToGrid(const Vector3<int>& batch_index_3d,
                                const std::array<GridState, 27>& sum_local,
                                Grid* grid);
+
+    // Update particle states F_p^{n+1} and v_p^{n+1}
+    void UpdateParticleStates(const std::array<Vector3<double>, 27>&
+                                                            batch_velocities,
+                              double dt, int p,
+                              Particles* particles);
 
     // Given the position of a particle xp, calculate the index of the batch
     // this particle is in.

@@ -15,6 +15,74 @@ class MPMTransferTest : public ::testing::Test {
  protected:
     void SetUp() { }
 
+    void CheckSortOutOfBounds() {
+        // First, construct a 3x3x3 grid centered at (0.0, 0.0, 0.0), with
+        // h = 2:
+        //         o - o - o
+        //         |   |   |
+        //     o - o - o - o
+        //     |   |   |   |
+        // o - o - o - o - o
+        // |   |   |   |
+        // o - o - o - o
+        // |   |   |
+        // o - o - o
+        // And make 27 particles on the location of 27 grid points. The
+        // particles' order are in a reversed lexiographical ordering.
+        Vector3<int> num_grid_pt_1D, bottom_corner;
+        double h;
+        int num_grid_pt, num_particles, pc;
+
+        num_grid_pt_1D = Vector3<int>(3, 3, 3);
+        h = 2.0;
+        bottom_corner = Vector3<int>(-1, -1, -1);
+
+        Grid grid = Grid(num_grid_pt_1D, h, bottom_corner);
+        num_particles = 27;
+        std::unique_ptr<Particles> particles =
+                                    std::make_unique<Particles>(num_particles);
+        EXPECT_EQ(particles->get_num_particles(), num_particles);
+        MPMTransfer mpm_transfer = MPMTransfer();
+        num_grid_pt = grid.get_num_gridpt();
+
+        EXPECT_EQ(num_grid_pt, 27);
+        EXPECT_EQ(num_grid_pt_1D(0), 3);
+        EXPECT_EQ(num_grid_pt_1D(1), 3);
+        EXPECT_EQ(num_grid_pt_1D(2), 3);
+        pc = particles->get_num_particles();
+        for (int k = bottom_corner(2);
+                                k < bottom_corner(2)+num_grid_pt_1D(2); ++k) {
+        for (int j = bottom_corner(1);
+                                j < bottom_corner(1)+num_grid_pt_1D(1); ++j) {
+        for (int i = bottom_corner(0);
+                                i < bottom_corner(0)+num_grid_pt_1D(0); ++i) {
+            particles->set_position(--pc, grid.get_position(i, j, k));
+        }
+        }
+        }
+
+        // Sanity check
+        EXPECT_TRUE(CompareMatrices(particles->get_position(0),
+                                    Vector3<double>(2.0, 2.0, 2.0),
+                                    std::numeric_limits<double>::epsilon()));
+        EXPECT_TRUE(CompareMatrices(particles->get_position(1),
+                                    Vector3<double>(0.0, 2.0, 2.0),
+                                    std::numeric_limits<double>::epsilon()));
+        EXPECT_TRUE(CompareMatrices(particles->get_position(8),
+                                    Vector3<double>(-2.0, -2.0, 2.0),
+                                    std::numeric_limits<double>::epsilon()));
+        EXPECT_TRUE(CompareMatrices(particles->get_position(13),
+                                    Vector3<double>(0.0, 0.0, 0.0),
+                                    std::numeric_limits<double>::epsilon()));
+        EXPECT_TRUE(CompareMatrices(particles->get_position(26),
+                                    Vector3<double>(-2.0, -2.0, -2.0),
+                                    std::numeric_limits<double>::epsilon()));
+
+        // Check particles out of bound error
+        EXPECT_THROW(mpm_transfer.SortParticles(grid, particles.get()),
+                     std::exception);
+    }
+
     void CheckSort1() {
         // Construct a grid of 5x5x5 on [-4,4]^3, and place 27 particles
         // on the centering 3x3x3 grid points.
@@ -632,6 +700,157 @@ class MPMTransferTest : public ::testing::Test {
                                     TOLERANCE));
     }
 
+    void checkG2PDeformationGrad() {
+        // Construct a grid of 3x3x3 on [-2,2]^3, and place 1 particles
+        // at the center
+        //        -2   0   2
+        //         o - o - o
+        //         |   |   |
+        //     o - o - o - o
+        //     |   |   |   |
+        // o - o - o - o - o
+        // |   |   |   |
+        // o - o - o - o
+        // |   |   |
+        // o - o - o
+        double mass_p;
+        Matrix3<double> F_p;
+        int h = 2.0;
+        Vector3<int> num_gridpt_1D = { 3,  3,  3};
+        Vector3<int> bottom_corner = {-1, -1, -1};
+        Vector3<double> velocity_i = {0.1, 0.2, 0.3};
+        int num_particles = 1;
+        double dt = 0.1;
+        grid_ = std::make_unique<Grid>(num_gridpt_1D, h, bottom_corner);
+        particles_ = std::make_unique<Particles>(num_particles);
+        mpm_transfer_ = std::make_unique<MPMTransfer>();
+
+        // Initialize particles' positions to be on grid points
+        mass_p = 0.2;
+        F_p   = 2.0*Matrix3<double>::Identity();
+        particles_->set_position(0, grid_->get_position(0, 0, 0));
+        particles_->set_mass(0, mass_p);
+        particles_->set_deformation_gradient(0, F_p);
+
+        // Initialize the grid velocity field. We assume it is constant,
+        // so the deformation gradient would not change
+        for (int k = bottom_corner(2);
+                 k < bottom_corner(2)+num_gridpt_1D(2); ++k) {
+        for (int j = bottom_corner(1);
+                 j < bottom_corner(1)+num_gridpt_1D(1); ++j) {
+        for (int i = bottom_corner(0);
+                 i < bottom_corner(0)+num_gridpt_1D(0); ++i) {
+            grid_->set_velocity(i, j, k, velocity_i);
+        }
+        }
+        }
+
+        // Sort the particles and set up the batches and preallocate basis
+        // evaluations
+        mpm_transfer_->SetUpTransfer(*grid_, particles_.get());
+
+        // Grid to particles transfer
+        mpm_transfer_->TransferGridToParticles(*grid_, dt, particles_.get());
+
+        // Since the velocity field is constant, the deformation gradient
+        // doesn't change with respect to time
+        EXPECT_TRUE(CompareMatrices(F_p,
+                                    particles_->get_deformation_gradient(0),
+                                    TOLERANCE));
+        EXPECT_TRUE(CompareMatrices(velocity_i, particles_->get_velocity(0),
+                                    TOLERANCE));
+    }
+
+    void checkG2PMassVelocity1() {
+        double sum_mass_particle, sum_mass_grid;
+        Vector3<double> sum_momentum_particle, sum_momentum_grid;
+        double dt = 0.1;
+
+        // First setup particles and grid using P2G
+        checkP2GMassVelocity1();
+        Vector3<int> bottom_corner = grid_->get_bottom_corner();
+        Vector3<int> num_gridpt_1D = grid_->get_num_gridpt_1D();
+        int num_particles = particles_->get_num_particles();
+
+        // Then we do a grid to particle transfer
+        mpm_transfer_->TransferGridToParticles(*grid_, dt, particles_.get());
+
+        // Particles' sum of mass and momentum
+        sum_mass_particle = 0.0;
+        sum_momentum_particle = {0.0, 0.0, 0.0};
+        for (int p = 0; p < num_particles; ++p) {
+            sum_mass_particle += particles_->get_mass(p);
+            sum_momentum_particle += particles_->get_mass(p)
+                            *particles_->get_velocity(p);
+        }
+
+        // Grid's sum of mass and momentum
+        sum_mass_grid = 0.0;
+        sum_momentum_grid = {0.0, 0.0, 0.0};
+        for (int k = bottom_corner(2);
+                 k < bottom_corner(2)+num_gridpt_1D(2); ++k) {
+        for (int j = bottom_corner(1);
+                 j < bottom_corner(1)+num_gridpt_1D(1); ++j) {
+        for (int i = bottom_corner(0);
+                 i < bottom_corner(0)+num_gridpt_1D(0); ++i) {
+            sum_mass_grid += grid_->get_mass(i, j, k);
+            sum_momentum_grid += grid_->get_mass(i, j, k)
+                            *grid_->get_velocity(i, j, k);
+        }
+        }
+        }
+
+        // Verify the conservation of mass and momentum
+        EXPECT_NEAR(sum_mass_particle, sum_mass_grid, TOLERANCE);
+        EXPECT_TRUE(CompareMatrices(sum_momentum_particle, sum_momentum_grid,
+                                    TOLERANCE));
+    }
+
+    void checkG2PMassVelocity2() {
+        double sum_mass_particle, sum_mass_grid;
+        Vector3<double> sum_momentum_particle, sum_momentum_grid;
+        double dt = 0.1;
+
+        // First setup particles and grid using P2G
+        checkP2GMassVelocity2();
+        Vector3<int> bottom_corner = grid_->get_bottom_corner();
+        Vector3<int> num_gridpt_1D = grid_->get_num_gridpt_1D();
+        int num_particles = particles_->get_num_particles();
+
+        // Then we do a grid to particle transfer
+        mpm_transfer_->TransferGridToParticles(*grid_, dt, particles_.get());
+
+        // Particles' sum of mass and momentum
+        sum_mass_particle = 0.0;
+        sum_momentum_particle = {0.0, 0.0, 0.0};
+        for (int p = 0; p < num_particles; ++p) {
+            sum_mass_particle += particles_->get_mass(p);
+            sum_momentum_particle += particles_->get_mass(p)
+                            *particles_->get_velocity(p);
+        }
+
+        // Grid's sum of mass and momentum
+        sum_mass_grid = 0.0;
+        sum_momentum_grid = {0.0, 0.0, 0.0};
+        for (int k = bottom_corner(2);
+                 k < bottom_corner(2)+num_gridpt_1D(2); ++k) {
+        for (int j = bottom_corner(1);
+                 j < bottom_corner(1)+num_gridpt_1D(1); ++j) {
+        for (int i = bottom_corner(0);
+                 i < bottom_corner(0)+num_gridpt_1D(0); ++i) {
+            sum_mass_grid += grid_->get_mass(i, j, k);
+            sum_momentum_grid += grid_->get_mass(i, j, k)
+                            *grid_->get_velocity(i, j, k);
+        }
+        }
+        }
+
+        // Verify the conservation of mass and momentum
+        EXPECT_NEAR(sum_mass_particle, sum_mass_grid, TOLERANCE);
+        EXPECT_TRUE(CompareMatrices(sum_momentum_particle, sum_momentum_grid,
+                                    TOLERANCE));
+    }
+
     std::unique_ptr<Particles> particles_;
     std::unique_ptr<Grid> grid_;
     std::unique_ptr<MPMTransfer> mpm_transfer_;
@@ -640,6 +859,7 @@ class MPMTransferTest : public ::testing::Test {
 namespace {
 
 TEST_F(MPMTransferTest, SortParticlesTest) {
+    CheckSortOutOfBounds();
     CheckSort1();
     CheckSort2();
     CheckSort3();
@@ -653,6 +873,12 @@ TEST_F(MPMTransferTest, P2GTest) {
     checkP2GForce();
     checkP2GMassVelocity1();
     checkP2GMassVelocity2();
+}
+
+TEST_F(MPMTransferTest, G2PTest) {
+    checkG2PDeformationGrad();
+    checkG2PMassVelocity1();
+    checkG2PMassVelocity2();
 }
 
 }  // namespace
