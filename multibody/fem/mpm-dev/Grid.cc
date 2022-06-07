@@ -175,6 +175,15 @@ void Grid::UpdateVelocity(double dt) {
     }
 }
 
+void Grid::EnforceBoundaryCondition(const BoundaryCondition&
+                                                        boundary_condition) {
+    // For all grid points, enforce frictional wall boundary condition
+    for (const auto& [index_flat, index_3d] : indices_) {
+        boundary_condition.Apply(positions_[index_flat],
+                                &velocities_[index_flat]);
+    }
+}
+
 }  // namespace mpm
 }  // namespace multibody
 }  // namespace drake

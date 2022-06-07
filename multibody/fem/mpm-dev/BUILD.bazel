@@ -80,7 +80,23 @@ drake_cc_library(
         "Grid.h",
     ],
     deps = [
+        ":BoundaryCondition",
         "//common:essential",
+        "//geometry/proximity:posed_half_space",
+    ],
+)
+
+drake_cc_library(
+    name = "BoundaryCondition",
+    srcs = [
+        "BoundaryCondition.cc",
+    ],
+    hdrs = [
+        "BoundaryCondition.h",
+    ],
+    deps = [
+        "//common:essential",
+        "//geometry/proximity:posed_half_space",
     ],
 )
 
@@ -156,6 +172,7 @@ drake_cc_googletest(
     deps = [
         ":Grid",
         "//common/test_utilities:eigen_matrix_compare",
+        "//geometry/proximity:posed_half_space",
     ],
 )
 
@@ -166,6 +183,15 @@ drake_cc_googletest(
         "//common:essential",
         "//common/test_utilities:eigen_matrix_compare",
         "//math:geometric_transform",
+    ],
+)
+
+drake_cc_googletest(
+    name = "BoundaryCondition_test",
+    deps = [
+        ":BoundaryCondition",
+        "//common:essential",
+        "//common/test_utilities:eigen_matrix_compare",
     ],
 )
 

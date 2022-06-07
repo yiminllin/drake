@@ -5,6 +5,8 @@
 #include <vector>
 
 #include "drake/common/eigen_types.h"
+#include "drake/geometry/proximity/posed_half_space.h"
+#include "drake/multibody/fem/mpm-dev/BoundaryCondition.h"
 
 namespace drake {
 namespace multibody {
@@ -98,6 +100,13 @@ class Grid {
     // the member variable, we update the velocity with the formula
     // v^{n+1} = v^n + dt*f^n/m^n
     void UpdateVelocity(double dt);
+
+    // Enforce wall boundary conditions on the given half space. THe normal of
+    // the given half space is the outward pointing normal from the interior of
+    // the domain to the exterior of the domain. We strongly impose this
+    // Dirichlet boundary conditions given by boundary_condition to all grid
+    // points in the boundary half- spaces.
+    void EnforceBoundaryCondition(const BoundaryCondition& boundary_condition);
 
  private:
     int num_gridpt_;
