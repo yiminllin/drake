@@ -101,6 +101,20 @@ drake_cc_library(
 )
 
 drake_cc_library(
+    name = "GravitationalForce",
+    srcs = [
+        "GravitationalForce.cc",
+    ],
+    hdrs = [
+        "GravitationalForce.h",
+    ],
+    deps = [
+        ":Grid",
+        "//common:essential",
+    ],
+)
+
+drake_cc_library(
     name = "MPMTransfer",
     srcs = [
         "MPMTransfer.cc",
@@ -190,6 +204,15 @@ drake_cc_googletest(
     name = "BoundaryCondition_test",
     deps = [
         ":BoundaryCondition",
+        "//common:essential",
+        "//common/test_utilities:eigen_matrix_compare",
+    ],
+)
+
+drake_cc_googletest(
+    name = "GravitationalForce_test",
+    deps = [
+        ":GravitationalForce",
         "//common:essential",
         "//common/test_utilities:eigen_matrix_compare",
     ],
