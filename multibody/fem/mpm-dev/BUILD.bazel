@@ -147,6 +147,14 @@ drake_cc_library(
     ],
 )
 
+drake_cc_library(
+    name = "poisson_disk_sampling",
+    hdrs = [
+        "poisson_disk_sampling.h",
+        "//common:eigen_types.h",
+    ],
+)
+
 drake_cc_binary(
     name = "run_mpm",
     deps = [
