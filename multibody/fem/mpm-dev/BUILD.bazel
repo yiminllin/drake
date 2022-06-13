@@ -115,6 +115,20 @@ drake_cc_library(
 )
 
 drake_cc_library(
+    name = "AnalyticLevelSet",
+    srcs = [
+        "AnalyticLevelSet.cc",
+    ],
+    hdrs = [
+        "AnalyticLevelSet.h",
+    ],
+    deps = [
+        "//common:essential",
+        "//math:geometric_transform",
+    ],
+)
+
+drake_cc_library(
     name = "MPMTransfer",
     srcs = [
         "MPMTransfer.cc",
@@ -221,6 +235,15 @@ drake_cc_googletest(
     name = "GravitationalForce_test",
     deps = [
         ":GravitationalForce",
+        "//common:essential",
+        "//common/test_utilities:eigen_matrix_compare",
+    ],
+)
+
+drake_cc_googletest(
+    name = "AnalyticLevelSet_test",
+    deps = [
+        ":AnalyticLevelSet",
         "//common:essential",
         "//common/test_utilities:eigen_matrix_compare",
     ],
