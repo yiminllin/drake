@@ -3,6 +3,7 @@
 #include <gtest/gtest.h>
 
 #include "drake/common/test_utilities/eigen_matrix_compare.h"
+#include "drake/multibody/fem/mpm-dev/CorotatedModel.h"
 
 namespace drake {
 namespace multibody {
@@ -650,6 +651,7 @@ class MPMTransferTest : public ::testing::Test {
         double vol1  = 10.0;
         Matrix3<double> F1 = pos1.asDiagonal();
         Matrix3<double> stress1 = vel1.asDiagonal();
+        CorotatedModel cmodel1 = CorotatedModel();
 
         Vector3<double> pos2 = {0.3, -0.1, 0.6};
         Vector3<double> vel2 = {-9.0, 8.0, -2.0};
@@ -657,6 +659,7 @@ class MPMTransferTest : public ::testing::Test {
         double vol2  = 3.0;
         Matrix3<double> F2 = pos2.asDiagonal();
         Matrix3<double> stress2 = vel2.asDiagonal();
+        CorotatedModel cmodel2 = CorotatedModel();
 
         Vector3<double> pos3 = {0.2, -0.5, 0.3};
         Vector3<double> vel3 = {2.0, -6.2, 8.0};
@@ -664,10 +667,11 @@ class MPMTransferTest : public ::testing::Test {
         double vol3  = 12.0;
         Matrix3<double> F3 = pos3.asDiagonal();
         Matrix3<double> stress3 = vel3.asDiagonal();
+        CorotatedModel cmodel3 = CorotatedModel();
 
-        particles_->AddParticle(pos1, vel1, mass1, vol1, F1, stress1);
-        particles_->AddParticle(pos2, vel2, mass2, vol2, F2, stress2);
-        particles_->AddParticle(pos3, vel3, mass3, vol3, F3, stress3);
+        particles_->AddParticle(pos1, vel1, mass1, vol1, F1, stress1, cmodel1);
+        particles_->AddParticle(pos2, vel2, mass2, vol2, F2, stress2, cmodel2);
+        particles_->AddParticle(pos3, vel3, mass3, vol3, F3, stress3, cmodel3);
 
         num_particles = particles_->get_num_particles();
         sum_mass_particles += (mass1 + mass2 + mass3);

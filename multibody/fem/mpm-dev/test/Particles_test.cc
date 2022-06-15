@@ -5,6 +5,7 @@
 #include "drake/common/test_utilities/eigen_matrix_compare.h"
 #include "drake/math/roll_pitch_yaw.h"
 #include "drake/math/rotation_matrix.h"
+#include "drake/multibody/fem/mpm-dev/CorotatedModel.h"
 
 namespace drake {
 namespace multibody {
@@ -23,6 +24,7 @@ GTEST_TEST(ParticlesClassTest, TestAddSetGet) {
     std::vector<double> reference_volumes;
     std::vector<Matrix3<double>> deformation_gradients;
     std::vector<Matrix3<double>> kirchhoff_stresses;
+    std::vector<CorotatedModel> corotated_models;
 
     Vector3<double> pos1 = {1.0, 2.0, 3.0};
     Vector3<double> vel1 = {-1.0, -2.0, -3.0};
@@ -30,6 +32,7 @@ GTEST_TEST(ParticlesClassTest, TestAddSetGet) {
     double vol1  = 10.0;
     Matrix3<double> F1 = pos1.asDiagonal();
     Matrix3<double> stress1 = vel1.asDiagonal();
+    CorotatedModel cmodel1 = CorotatedModel(10.0, 0.1);
 
     Vector3<double> pos2 = {3.0, -1.0, 6.0};
     Vector3<double> vel2 = {-9.0, 8.0, -2.0};
@@ -37,12 +40,13 @@ GTEST_TEST(ParticlesClassTest, TestAddSetGet) {
     double vol2  = 3.0;
     Matrix3<double> F2 = pos2.asDiagonal();
     Matrix3<double> stress2 = vel2.asDiagonal();
+    CorotatedModel cmodel2 = CorotatedModel(20.0, 0.2);
 
     Particles particles = Particles();
     EXPECT_EQ(particles.get_num_particles(), 0);
-    particles.AddParticle(pos1, vel1, mass1, vol1, F1, stress1);
+    particles.AddParticle(pos1, vel1, mass1, vol1, F1, stress1, cmodel1);
     EXPECT_EQ(particles.get_num_particles(), 1);
-    particles.AddParticle(pos2, vel2, mass2, vol2, F2, stress2);
+    particles.AddParticle(pos2, vel2, mass2, vol2, F2, stress2, cmodel2);
     EXPECT_EQ(particles.get_num_particles(), 2);
 
     // Test get individual element
@@ -135,7 +139,7 @@ GTEST_TEST(ParticlesClassTest, TestAddSetGet) {
     EXPECT_TRUE(CompareMatrices(particles.get_kirchhoff_stress(1), stress2,
                 std::numeric_limits<double>::epsilon()));
 
-    particles.AddParticle(pos1, vel1, mass1, vol1, F1, stress1);
+    particles.AddParticle(pos1, vel1, mass1, vol1, F1, stress1, cmodel1);
     EXPECT_EQ(particles.get_num_particles(), 3);
     EXPECT_TRUE(CompareMatrices(particles.get_position(2), pos1,
                 std::numeric_limits<double>::epsilon()));
@@ -180,7 +184,7 @@ GTEST_TEST(ParticlesClassTest, TestAddSetGet) {
     EXPECT_TRUE(CompareMatrices(particles.get_kirchhoff_stress(1), stress2,
                 std::numeric_limits<double>::epsilon()));
 
-    particles.AddParticle(pos1, vel1, mass1, vol1, F1, stress1);
+    particles.AddParticle(pos1, vel1, mass1, vol1, F1, stress1, cmodel1);
     EXPECT_EQ(particles.get_num_particles(), 3);
     EXPECT_TRUE(CompareMatrices(particles.get_position(2), pos1,
                 std::numeric_limits<double>::epsilon()));
@@ -208,6 +212,7 @@ GTEST_TEST(ParticlesClassTest, TestReorder) {
     double vol1  = 10.0;
     Matrix3<double> F1 = pos1.asDiagonal();
     Matrix3<double> stress1 = vel1.asDiagonal();
+    CorotatedModel cmodel1 = CorotatedModel(10.0, 0.1);
 
     Vector3<double> pos2 = {3.0, -1.0, 6.0};
     Vector3<double> vel2 = {-9.0, 8.0, -2.0};
@@ -215,6 +220,7 @@ GTEST_TEST(ParticlesClassTest, TestReorder) {
     double vol2  = 3.0;
     Matrix3<double> F2 = pos2.asDiagonal();
     Matrix3<double> stress2 = vel2.asDiagonal();
+    CorotatedModel cmodel2 = CorotatedModel(20.0, 0.2);
 
     Vector3<double> pos3 = {3.2, -1.0, 1.0};
     Vector3<double> vel3 = {2.0, -6.2, 8.0};
@@ -222,11 +228,12 @@ GTEST_TEST(ParticlesClassTest, TestReorder) {
     double vol3  = 12.0;
     Matrix3<double> F3 = pos3.asDiagonal();
     Matrix3<double> stress3 = vel3.asDiagonal();
+    CorotatedModel cmodel3 = CorotatedModel(30.0, 0.3);
 
     Particles particles = Particles();
-    particles.AddParticle(pos1, vel1, mass1, vol1, F1, stress1);
-    particles.AddParticle(pos2, vel2, mass2, vol2, F2, stress2);
-    particles.AddParticle(pos3, vel3, mass3, vol3, F3, stress3);
+    particles.AddParticle(pos1, vel1, mass1, vol1, F1, stress1, cmodel1);
+    particles.AddParticle(pos2, vel2, mass2, vol2, F2, stress2, cmodel2);
+    particles.AddParticle(pos3, vel3, mass3, vol3, F3, stress3, cmodel3);
 
     // Check the original ordering
     EXPECT_TRUE(CompareMatrices(particles.get_position(0), pos1, kEps));
@@ -303,7 +310,7 @@ GTEST_TEST(ParticlesClassTest, TestAdvectAndUpdateKirchhoffStress) {
     std::vector<double> reference_volumes;
     std::vector<Matrix3<double>> deformation_gradients;
     std::vector<Matrix3<double>> kirchhoff_stresses;
-    CorotatedModel corotated_model = CorotatedModel(5.0, 0.25);
+    CorotatedModel coro_model = CorotatedModel(5.0, 0.25);
 
     const Matrix3<double> R =
         math::RotationMatrix<double>
@@ -333,8 +340,8 @@ GTEST_TEST(ParticlesClassTest, TestAdvectAndUpdateKirchhoffStress) {
     Matrix3<double> stress2 = Matrix3<double>::Ones();
 
     Particles particles = Particles();
-    particles.AddParticle(pos1, vel1, mass1, vol1, F1, stress1);
-    particles.AddParticle(pos2, vel2, mass2, vol2, F2, stress2);
+    particles.AddParticle(pos1, vel1, mass1, vol1, F1, stress1, coro_model);
+    particles.AddParticle(pos2, vel2, mass2, vol2, F2, stress2, coro_model);
 
     // Advect particles
     double dt = 0.3;
@@ -345,7 +352,7 @@ GTEST_TEST(ParticlesClassTest, TestAdvectAndUpdateKirchhoffStress) {
                                 Vector3<double>(0.3, 1.4, 5.4), kEps));
 
     // Update Kirchhoff stress
-    particles.UpdateKirchhoffStresses(corotated_model);
+    particles.UpdateKirchhoffStresses();
     EXPECT_TRUE(CompareMatrices(particles.get_kirchhoff_stress(0),
                                 tau_exact, TOLERANCE));
     EXPECT_TRUE(CompareMatrices(particles.get_kirchhoff_stress(1),

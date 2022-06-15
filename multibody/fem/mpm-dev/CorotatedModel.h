@@ -10,6 +10,9 @@ namespace mpm {
 // A implementation of Fixed Corotated Model (Constitutive Model)
 class CorotatedModel {
  public:
+    // Default material, dough: E = 9e4 Pa, nu = 0.49
+    CorotatedModel();
+
     // Constructor uses Young's modulus E and Poisson's ratio nu
     CorotatedModel(double E, double nu);
 

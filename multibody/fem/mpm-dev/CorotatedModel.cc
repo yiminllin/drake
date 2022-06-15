@@ -4,6 +4,8 @@ namespace drake {
 namespace multibody {
 namespace mpm {
 
+CorotatedModel::CorotatedModel(): mu_(9e4), lambda_(0.49) {}
+
 CorotatedModel::CorotatedModel(double E, double nu):
     mu_(E/(2*(1+nu))), lambda_(E*nu/(1+nu)/(1-2*nu)) {
         DRAKE_ASSERT(E >= 0);
