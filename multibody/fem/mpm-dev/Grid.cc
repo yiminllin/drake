@@ -175,12 +175,11 @@ void Grid::UpdateVelocity(double dt) {
     }
 }
 
-void Grid::EnforceBoundaryCondition(const BoundaryCondition&
-                                                        boundary_condition) {
+void Grid::EnforceBoundaryCondition(const KinematicCollisionObjects& objects) {
     // For all grid points, enforce frictional wall boundary condition
     for (const auto& [index_flat, index_3d] : indices_) {
-        boundary_condition.Apply(positions_[index_flat],
-                                &velocities_[index_flat]);
+        objects.ApplyBoundaryConditions(positions_[index_flat],
+                                        &velocities_[index_flat]);
     }
 }
 

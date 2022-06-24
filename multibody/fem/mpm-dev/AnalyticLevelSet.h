@@ -45,6 +45,20 @@ class AnalyticLevelSet {
     std::array<Vector3<double>, 2> bounding_box_{};
 };  // class AnalyticLevelSet
 
+// An analytic level set class for half space with the given `normal` and center
+// (0, 0, 0)
+class HalfSpaceLevelSet : public AnalyticLevelSet {
+ public:
+    // @pre the normal is nonzero
+    explicit HalfSpaceLevelSet(const Vector3<double>& normal);
+    bool InInterior(const Vector3<double>& position) const final;
+
+    Vector3<double> Normal(const Vector3<double>& position) const final;
+
+ private:
+    Vector3<double> normal_;
+};  // class HalfSpaceLevelSet
+
 // An analytic level set class for sphere with radius radius_ and center
 // (0, 0, 0)
 class SphereLevelSet : public AnalyticLevelSet {

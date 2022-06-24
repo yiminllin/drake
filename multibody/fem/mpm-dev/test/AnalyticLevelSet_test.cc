@@ -2,6 +2,8 @@
 
 #include <math.h>
 
+#include <limits>
+
 #include <gtest/gtest.h>
 
 #include "drake/common/test_utilities/eigen_matrix_compare.h"
@@ -14,6 +16,45 @@ namespace {
 
 constexpr double TOLERANCE = 1e-12;
 
+GTEST_TEST(AnalyticLevelSetTest, HalfSpaceTest) {
+    const Vector3<double> normal = {3.0, 2.0, 1.0};
+
+    // Check InInterior
+    HalfSpaceLevelSet half_space = HalfSpaceLevelSet(normal);
+    EXPECT_EQ(half_space.get_volume(), std::numeric_limits<double>::infinity());
+    EXPECT_TRUE(half_space.InInterior({0.0, 0.0, 0.0}));
+    EXPECT_TRUE(half_space.InInterior({-2.5, -1.5, 0.0}));
+    EXPECT_TRUE(half_space.InInterior({-3.0, -2.0, -1.0}));
+    EXPECT_FALSE(half_space.InInterior({3.0, 2.0, 1.0}));
+    EXPECT_FALSE(half_space.InInterior({1.0, 2.0, 3.0}));
+
+    // Check Normal
+    Vector3<double> normal_outward = {3.0/sqrt(14),
+                                      2.0/sqrt(14),
+                                      1.0/sqrt(14)};
+    EXPECT_TRUE(CompareMatrices(half_space.Normal({0.0, 0.0, -0.1}),
+                                           normal_outward,
+                                           TOLERANCE));
+    EXPECT_TRUE(CompareMatrices(half_space.Normal({0.0, 0.0, 0.0}),
+                                           normal_outward,
+                                           TOLERANCE));
+    EXPECT_THROW(half_space.Normal({4.0, 3.0, 3.0}), std::exception);
+
+    // Check Bounding Box
+    const std::array<Vector3<double>, 2>& bounding_box =
+                                                half_space.get_bounding_box();
+    EXPECT_TRUE(CompareMatrices(bounding_box[0],
+                    Vector3<double>{-std::numeric_limits<double>::infinity(),
+                                    -std::numeric_limits<double>::infinity(),
+                                    -std::numeric_limits<double>::infinity()},
+                                TOLERANCE));
+    EXPECT_TRUE(CompareMatrices(bounding_box[1],
+                    Vector3<double>{ std::numeric_limits<double>::infinity(),
+                                     std::numeric_limits<double>::infinity(),
+                                     std::numeric_limits<double>::infinity()},
+                                TOLERANCE));
+}
+
 GTEST_TEST(AnalyticLevelSetTest, BoxTest) {
     const Vector3<double> xscale = {3.0, 2.0, 1.0};
 
@@ -23,8 +64,8 @@ GTEST_TEST(AnalyticLevelSetTest, BoxTest) {
     EXPECT_TRUE(box.InInterior({0.0, 0.0, 0.0}));
     EXPECT_TRUE(box.InInterior({1.0, -1.0, 0.0}));
     EXPECT_TRUE(box.InInterior({-2.5, -1.5, 0.0}));
+    EXPECT_TRUE(box.InInterior({-3.0, -2.0, -1.0}));
     EXPECT_FALSE(box.InInterior({1.0, 2.0, 3.0}));
-    EXPECT_FALSE(box.InInterior({-3.0, -2.0, -1.0}));
 
     // Check Normal
     EXPECT_TRUE(CompareMatrices(box.Normal({0.0, 0.0, 0.1}),

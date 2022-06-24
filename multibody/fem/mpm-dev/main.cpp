@@ -12,7 +12,9 @@
 #include "drake/common/eigen_types.h"
 #include "drake/common/filesystem.h"
 #include "drake/common/temp_directory.h"
+#include "drake/math/roll_pitch_yaw.h"
 #include "drake/multibody/fem/mpm-dev/MPMDriver.h"
+#include "drake/multibody/math/spatial_velocity.h"
 
 namespace drake {
 namespace multibody {
@@ -24,9 +26,9 @@ int DoMain() {
     };
 
     MPMParameters::SolverParameters s_param {
-        1e-0,                                  // End time
-        2e-4,                                  // Time step size
-        0.01,                                  // Grid size
+        3e-0,                                  // End time
+        5e-4,                                  // Time step size
+        0.1,                                   // Grid size
         Vector3<int>(23, 23, 23),              // Number of grid points in each
                                                // direction
         Vector3<int>(-1, -1, -1),              // Bottom corner of the grid
@@ -41,39 +43,52 @@ int DoMain() {
     MPMParameters param {p_param, s_param, io_param};
     auto driver = std::make_unique<MPMDriver>(std::move(param));
 
-    BoundaryCondition::Boundary b0 = {0.5, {{1, 0, 1}, {0.1, 0, 0}}};
-    BoundaryCondition::Boundary b1 = {0.1, {{-1, 0, 1}, {0.1, 0, 0}}};
-    std::vector<BoundaryCondition::Boundary> boundaries = {b0, b1};
+    KinematicCollisionObjects objects = KinematicCollisionObjects();
 
-    // Initialize a box
-    Vector3<double> xscale = {0.02, 0.02, 0.02};
-    BoxLevelSet level_set_box = BoxLevelSet(xscale);
-    Vector3<double> translation_box = {0.18, 0.1, 0.18};
-    math::RigidTransform<double> pose_box =
-                            math::RigidTransform<double>(translation_box);
-    MPMDriver::MaterialParameters m_param_box { {8e4, 0.49},      // Corotated
-                                                1272,             // Density
-                                                {0.0, 0.0, 0.0},  // Velocity
-                                                1,                // min number
-                                                                  // particles
-                                                                  // per cell
-                                              };
+    // Initialize the wall
+    multibody::SpatialVelocity<double> wall_velocity;
+    wall_velocity.SetZero();
+    double wall_mu = 0.5;
+    Vector3<double> wall_normal = {0.0, 0.0, 1.0};
+    std::unique_ptr<AnalyticLevelSet> wall_level_set =
+                            std::make_unique<HalfSpaceLevelSet>(wall_normal);
+    Vector3<double> wall_translation = {0.0, 0.0, 0.0};
+    math::RigidTransform<double> wall_pose =
+                            math::RigidTransform<double>(wall_translation);
+    objects.AddCollisionObject(std::move(wall_level_set), std::move(wall_pose),
+                               wall_velocity, wall_mu);
+
+    // Initialize the cylinder
+    multibody::SpatialVelocity<double> cylinder_velocity;
+    cylinder_velocity.translational() = Vector3<double>(-1.0, 0.0, 0.0);
+    cylinder_velocity.rotational() = Vector3<double>(0.0, -M_PI/2, 0.0);
+    double cylinder_mu = 0.4;
+    double cylinder_height = 2;
+    double cylinder_radius = 0.4;
+    std::unique_ptr<AnalyticLevelSet> cylinder_level_set =
+                            std::make_unique<CylinderLevelSet>(cylinder_height,
+                                                               cylinder_radius);
+    math::RollPitchYaw cylinder_rpw = {M_PI/2.0, 0.0, 0.0};
+    Vector3<double> cylinder_translation = {2.5, 1.0, 0.6};
+    math::RigidTransform<double> cylinder_pose =
+            math::RigidTransform<double>(cylinder_rpw, cylinder_translation);
+    objects.AddCollisionObject(std::move(cylinder_level_set),
+                               std::move(cylinder_pose),
+                               cylinder_velocity, cylinder_mu);
 
     // Initialize a sphere
-    double radius = 0.02;
+    double radius = 0.2;
     SphereLevelSet level_set_sphere = SphereLevelSet(radius);
-    Vector3<double> translation_sphere = {0.02, 0.1, 0.18};
+    Vector3<double> translation_sphere = {1.8, 1.0, 0.5};
     math::RigidTransform<double> pose_sphere =
                             math::RigidTransform<double>(translation_sphere);
-    MPMDriver::MaterialParameters m_param_sphere { {8e1, 0.49},
+    MPMDriver::MaterialParameters m_param_sphere { {8e4, 0.4},
                                                    800,
                                                    {0.0, 0.0, 0.0},
                                                    1
                                                  };
 
-    driver->InitializeBoundaryConditions(std::move(boundaries));
-    driver->InitializeParticles(level_set_box, pose_box,
-                                std::move(m_param_box));
+    driver->InitializeKinematicCollisionObjects(std::move(objects));
     driver->InitializeParticles(level_set_sphere, pose_sphere,
                                 std::move(m_param_sphere));
     driver->DoTimeStepping();
