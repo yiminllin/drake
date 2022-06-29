@@ -290,6 +290,48 @@ GTEST_TEST(GridClassTest, TestUpdateVelocity) {
     }
 }
 
+GTEST_TEST(GridClassTest, TestGridSumState) {
+    // In this test case, we construct a 2x2x2 grid
+    Vector3<int> num_gridpt_1D = {2, 2, 2};
+    double h = 1.0;
+    Vector3<int> bottom_corner  = {0, 0, 0};
+    Grid grid = Grid(num_gridpt_1D, h, bottom_corner);
+
+    // Initialize the mass and velocity of the grid with dummy masses
+    //    7 o -- o 8
+    //  5  /| 6 /|
+    //    o -- o |
+    //    | o 3| o 4
+    //    o -- o
+    //    1    2
+    double dummy_m;
+    Vector3<double> dummy_v = {1.0, 1.0, 1.0};
+    int pc = 0;
+    for (int k = bottom_corner(2);
+                k < bottom_corner(2)+num_gridpt_1D(2); ++k) {
+    for (int j = bottom_corner(1);
+                j < bottom_corner(1)+num_gridpt_1D(1); ++j) {
+    for (int i = bottom_corner(0);
+                i < bottom_corner(0)+num_gridpt_1D(0); ++i) {
+        dummy_m = ++pc;
+        grid.set_velocity(i, j, k, dummy_v);
+        grid.set_mass(i, j, k, dummy_m);
+    }
+    }
+    }
+
+    TotalMassAndMomentum sum_state = grid.GetTotalMassAndMomentum();
+    // Sum of mass shall be ∑ i, i = 1 ... 8 = 36, as a result
+    // Sum of momentum shall be (36, 36, 36)
+    // mi ∑ xi.cross(vi) = (∑ mi xi).cross(vi) = (20 22 26) cross (1, 1, 1)
+    // because vi constant, and cross product is a bilinear operator.
+    EXPECT_EQ(sum_state.sum_mass, 36.0);
+    EXPECT_TRUE(CompareMatrices(sum_state.sum_momentum,
+                                Vector3<double>(36.0, 36.0, 36.0), kEps));
+    EXPECT_TRUE(CompareMatrices(sum_state.sum_angular_momentum,
+                                Vector3<double>(-4.0, 6.0, -2.0), kEps));
+}
+
 GTEST_TEST(GridClassTest, TestWallBoundaryConditionWithHalfSpace) {
     // In this test case, we enforce slip wall boundary condition to the
     // boundary of a 10x20x30 grid.

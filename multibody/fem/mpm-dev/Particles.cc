@@ -13,6 +13,7 @@ Particles::Particles(int num_particles): num_particles_(num_particles),
                                          reference_volumes_(num_particles),
                                          deformation_gradients_(num_particles),
                                          kirchhoff_stresses_(num_particles),
+                                         B_matrices_(num_particles),
                                          corotated_models_(num_particles) {
     DRAKE_ASSERT(num_particles >= 0);
 }
@@ -45,6 +46,10 @@ const Matrix3<double>& Particles::get_kirchhoff_stress(int index) const {
     return kirchhoff_stresses_[index];
 }
 
+const Matrix3<double>& Particles::get_B_matrix(int index) const {
+    return B_matrices_[index];
+}
+
 const CorotatedModel& Particles::get_corotated_model(int index) const {
     return corotated_models_[index];
 }
@@ -69,8 +74,13 @@ const std::vector<Matrix3<double>>& Particles::get_deformation_gradients()
                                                                         const {
     return deformation_gradients_;
 }
+
 const std::vector<Matrix3<double>>& Particles::get_kirchhoff_stresses() const {
     return kirchhoff_stresses_;
+}
+
+const std::vector<Matrix3<double>>& Particles::get_B_matrices() const {
+    return B_matrices_;
 }
 
 void Particles::set_position(int index, const Vector3<double>& position) {
@@ -99,6 +109,10 @@ void Particles::set_deformation_gradient(int index,
 void Particles::set_kirchhoff_stress(int index,
                                      const Matrix3<double>& kirchhoff_stress) {
     kirchhoff_stresses_[index] = kirchhoff_stress;
+}
+
+void Particles::set_B_matrix(int index, const Matrix3<double>& B_matrix) {
+    B_matrices_[index] = B_matrix;
 }
 
 void Particles::set_corotated_model(int index,
@@ -133,6 +147,10 @@ void Particles::set_kirchhoff_stresses(const std::vector<Matrix3<double>>&
     kirchhoff_stresses_ = kirchhoff_stresses;
 }
 
+void Particles::set_B_matrices(const std::vector<Matrix3<double>>& B_matrices) {
+    B_matrices_ = B_matrices;
+}
+
 void Particles::Reorder(const std::vector<size_t>& new_order) {
     DRAKE_DEMAND(static_cast<int>(new_order.size()) == num_particles_);
     int p_new;
@@ -142,6 +160,7 @@ void Particles::Reorder(const std::vector<size_t>& new_order) {
     std::vector<double> reference_volumes_sorted(num_particles_);
     std::vector<Matrix3<double>> deformation_gradients_sorted(num_particles_);
     std::vector<Matrix3<double>> kirchhoff_stresses_sorted(num_particles_);
+    std::vector<Matrix3<double>> B_matrices_sorted(num_particles_);
     std::vector<CorotatedModel> corotated_models_sorted(num_particles_);
     for (int p = 0; p < num_particles_; ++p) {
         p_new = new_order[p];
@@ -151,6 +170,7 @@ void Particles::Reorder(const std::vector<size_t>& new_order) {
         reference_volumes_sorted[p]     = reference_volumes_[p_new];
         deformation_gradients_sorted[p] = deformation_gradients_[p_new];
         kirchhoff_stresses_sorted[p]    = kirchhoff_stresses_[p_new];
+        B_matrices_sorted[p]            = B_matrices_[p_new];
         corotated_models_sorted[p]      = corotated_models_[p_new];
     }
     positions_.swap(positions_sorted);
@@ -159,6 +179,7 @@ void Particles::Reorder(const std::vector<size_t>& new_order) {
     reference_volumes_.swap(reference_volumes_sorted);
     deformation_gradients_.swap(deformation_gradients_sorted);
     kirchhoff_stresses_.swap(kirchhoff_stresses_sorted);
+    B_matrices_.swap(B_matrices_sorted);
     corotated_models_.swap(corotated_models_sorted);
 }
 
@@ -167,6 +188,7 @@ void Particles::AddParticle(const Vector3<double>& position,
                             double mass, double reference_volume,
                             const Matrix3<double>& deformation_gradient,
                             const Matrix3<double>& kirchhoff_stress,
+                            const Matrix3<double>& B_matrix,
                             const CorotatedModel& corotated_model) {
     positions_.emplace_back(position);
     velocities_.emplace_back(velocity);
@@ -174,6 +196,7 @@ void Particles::AddParticle(const Vector3<double>& position,
     reference_volumes_.emplace_back(reference_volume);
     deformation_gradients_.emplace_back(deformation_gradient);
     kirchhoff_stresses_.emplace_back(kirchhoff_stress);
+    B_matrices_.emplace_back(B_matrix);
     corotated_models_.emplace_back(corotated_model);
     num_particles_++;
 }
@@ -189,6 +212,25 @@ void Particles::AdvectParticles(double dt) {
     for (int p = 0; p < num_particles_; ++p) {
         positions_[p] += dt*velocities_[p];
     }
+}
+
+TotalMassAndMomentum Particles::GetTotalMassAndMomentum() const {
+    TotalMassAndMomentum sum_particles_state;
+    // Particles' sum of mass and momentum
+    sum_particles_state.sum_mass             = 0.0;
+    sum_particles_state.sum_momentum         = {0.0, 0.0, 0.0};
+    sum_particles_state.sum_angular_momentum = {0.0, 0.0, 0.0};
+    for (int p = 0; p < num_particles_; ++p) {
+        double mp = masses_[p];
+        const Vector3<double>& vp = velocities_[p];
+        const Vector3<double>& xp = positions_[p];
+        const Matrix3<double>& Bp = B_matrices_[p];
+        sum_particles_state.sum_mass             += mp;
+        sum_particles_state.sum_momentum         += mp*vp;
+        sum_particles_state.sum_angular_momentum += mp*(xp.cross(vp)
+                        + mathutils::ContractionWithLeviCivita(Bp.transpose()));
+    }
+    return sum_particles_state;
 }
 
 }  // namespace mpm

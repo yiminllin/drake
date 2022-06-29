@@ -61,7 +61,9 @@ int DoMain() {
     // Initialize the cylinder
     multibody::SpatialVelocity<double> cylinder_velocity;
     cylinder_velocity.translational() = Vector3<double>(-1.0, 0.0, 0.0);
-    cylinder_velocity.rotational() = Vector3<double>(0.0, -M_PI/2, 0.0);
+    // Choose consistent rotational velocity so
+    // rotational velocity x (0, 0, -r) = - translational velocity
+    cylinder_velocity.rotational() = Vector3<double>(0.0, -2.5, 0.0);
     double cylinder_mu = 0.4;
     double cylinder_height = 2;
     double cylinder_radius = 0.4;
@@ -83,7 +85,7 @@ int DoMain() {
     math::RigidTransform<double> pose_sphere =
                             math::RigidTransform<double>(translation_sphere);
     MPMDriver::MaterialParameters m_param_sphere { {8e4, 0.4},
-                                                   800,
+                                                   1200,
                                                    {0.0, 0.0, 0.0},
                                                    1
                                                  };

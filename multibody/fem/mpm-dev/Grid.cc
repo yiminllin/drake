@@ -16,7 +16,6 @@ Grid::Grid(const Vector3<int>& num_gridpt_1D, double h,
     DRAKE_ASSERT(h_ > 0.0);
 
     indices_ = std::vector<std::pair<int, Vector3<int>>>(num_gridpt_);
-    positions_ = std::vector<Vector3<double>>(num_gridpt_);
     velocities_ = std::vector<Vector3<double>>(num_gridpt_);
     masses_ = std::vector<double>(num_gridpt_);
     forces_ = std::vector<Vector3<double>>(num_gridpt_);
@@ -30,7 +29,6 @@ Grid::Grid(const Vector3<int>& num_gridpt_1D, double h,
              i < bottom_corner_(0) + num_gridpt_1D_(0); ++i) {
         idx = Reduce3DIndex(i, j, k);
         indices_[idx] = std::pair<int, Vector3<int>>(idx, {i, j, k});
-        positions_[idx] = Vector3<double>{h_*i, h_*j, h_*k};
     }
     }
     }
@@ -52,9 +50,9 @@ const Vector3<int>& Grid::get_bottom_corner() const {
     return bottom_corner_;
 }
 
-const Vector3<double>& Grid::get_position(int i, int j, int k) const {
+Vector3<double> Grid::get_position(int i, int j, int k) const {
     DRAKE_ASSERT(in_index_range(i, j, k));
-    return positions_[Reduce3DIndex(i, j, k)];
+    return Vector3<double>(i*h_, j*h_, k*h_);
 }
 
 const Vector3<double>& Grid::get_velocity(int i, int j, int k) const {
@@ -70,11 +68,6 @@ double Grid::get_mass(int i, int j, int k) const {
 const Vector3<double>& Grid::get_force(int i, int j, int k) const {
     DRAKE_ASSERT(in_index_range(i, j, k));
     return forces_[Reduce3DIndex(i, j, k)];
-}
-
-void Grid::set_position(int i, int j, int k, const Vector3<double>& position) {
-    DRAKE_ASSERT(in_index_range(i, j, k));
-    positions_[Reduce3DIndex(i, j, k)] = position;
 }
 
 void Grid::set_velocity(int i, int j, int k, const Vector3<double>& velocity) {
@@ -178,9 +171,33 @@ void Grid::UpdateVelocity(double dt) {
 void Grid::EnforceBoundaryCondition(const KinematicCollisionObjects& objects) {
     // For all grid points, enforce frictional wall boundary condition
     for (const auto& [index_flat, index_3d] : indices_) {
-        objects.ApplyBoundaryConditions(positions_[index_flat],
+        objects.ApplyBoundaryConditions(get_position(index_3d(0), index_3d(1),
+                                                     index_3d(2)),
                                         &velocities_[index_flat]);
     }
+}
+
+TotalMassAndMomentum Grid::GetTotalMassAndMomentum() const {
+    TotalMassAndMomentum sum_state;
+    sum_state.sum_mass             = 0.0;
+    sum_state.sum_momentum         = Vector3<double>::Zero();
+    sum_state.sum_angular_momentum = Vector3<double>::Zero();
+    for (int k = bottom_corner_(2);
+                k < bottom_corner_(2)+num_gridpt_1D_(2); ++k) {
+    for (int j = bottom_corner_(1);
+                j < bottom_corner_(1)+num_gridpt_1D_(1); ++j) {
+    for (int i = bottom_corner_(0);
+                i < bottom_corner_(0)+num_gridpt_1D_(0); ++i) {
+        double mi = get_mass(i, j, k);
+        const Vector3<double> vi = get_velocity(i, j, k);
+        const Vector3<double> xi = get_position(i, j, k);
+        sum_state.sum_mass             += mi;
+        sum_state.sum_momentum         += mi*vi;
+        sum_state.sum_angular_momentum += mi*xi.cross(vi);
+    }
+    }
+    }
+    return sum_state;
 }
 
 }  // namespace mpm

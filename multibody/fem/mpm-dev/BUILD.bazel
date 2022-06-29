@@ -39,6 +39,19 @@ drake_cc_library(
 )
 
 drake_cc_library(
+    name = "MathUtils",
+    srcs = [
+        "MathUtils.cc",
+    ],
+    hdrs = [
+        "MathUtils.h",
+    ],
+    deps = [
+        "//common:essential",
+    ],
+)
+
+drake_cc_library(
     name = "CorotatedModel",
     srcs = [
         "CorotatedModel.cc",
@@ -62,6 +75,8 @@ drake_cc_library(
     ],
     deps = [
         ":CorotatedModel",
+        ":MathUtils",
+        ":TotalMassAndMomentum",
         "//common:essential",
     ],
 )
@@ -76,6 +91,7 @@ drake_cc_library(
     ],
     deps = [
         ":KinematicCollisionObjects",
+        ":TotalMassAndMomentum",
         "//common:essential",
         "//geometry/proximity:posed_half_space",
     ],
@@ -137,6 +153,16 @@ drake_cc_library(
     deps = [
         "//common:essential",
         "//math:geometric_transform",
+    ],
+)
+
+drake_cc_library(
+    name = "TotalMassAndMomentum",
+    hdrs = [
+        "TotalMassAndMomentum.h",
+    ],
+    deps = [
+        "//common:essential",
     ],
 )
 
@@ -233,9 +259,18 @@ drake_cc_googletest(
 )
 
 drake_cc_googletest(
+    name = "MathUtils_test",
+    deps = [
+        ":MathUtils",
+        "//common/test_utilities:eigen_matrix_compare",
+    ],
+)
+
+drake_cc_googletest(
     name = "Particles_test",
     deps = [
         ":Particles",
+        ":TotalMassAndMomentum",
         "//common/test_utilities:eigen_matrix_compare",
         "//math:geometric_transform",
     ],
@@ -246,6 +281,7 @@ drake_cc_googletest(
     deps = [
         ":AnalyticLevelSet",
         ":Grid",
+        ":TotalMassAndMomentum",
         "//common/test_utilities:eigen_matrix_compare",
         "//geometry/proximity:posed_half_space",
         "//math:geometric_transform",
@@ -298,6 +334,7 @@ drake_cc_googletest(
         ":Grid",
         ":MPMTransfer",
         ":Particles",
+        ":TotalMassAndMomentum",
         "//common:essential",
         "//common/test_utilities:eigen_matrix_compare",
     ],
