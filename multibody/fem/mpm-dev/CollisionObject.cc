@@ -20,9 +20,9 @@ void CollisionObject::AdvanceOneTimeStep(double dt) {
     angular_velocity_matrix <<       0.0, -omega(2),  omega(1),
                                 omega(2),       0.0, -omega(0),
                                -omega(1),  omega(0),       0.0;
-    Matrix3<double> R = state_.pose.rotation()
-                       *(Matrix3<double>::Identity()
-                       +dt*angular_velocity_matrix);
+    Matrix3<double> R = (Matrix3<double>::Identity()
+                        +dt*angular_velocity_matrix)
+                        *state_.pose.rotation().matrix();
     // Orthogonalize the new rotation matrix via polar decomposition
     fem::internal::PolarDecompose<double>(R, &R_new, &S);
     drake::math::RotationMatrix<double> rotation_new =

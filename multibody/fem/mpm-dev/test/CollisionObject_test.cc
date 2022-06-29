@@ -196,6 +196,25 @@ class CollisionObjectTest : public ::testing::Test {
                                     TOLERANCE));
         ASSERT_TRUE(CompareMatrices(sphere_->state_.pose.rotation().matrix(),
                                     R_new, TOLERANCE));
+
+        sphere_->AdvanceOneTimeStep(dt);
+        // After another time step, the new unnormalized rotation matrix should
+        // be:     (I + [w])[1           0           0
+        //                   0   1/(√1+π²)  -π/(√1+π²)
+        //                   0   π/(√1+π²)   1/(√1+π²)]
+        // R_new = 1/(√[(1-π²)²+4π²])[1     0     0
+        //                            0   1-π²  -2π
+        //                            0    2π  1-π²]
+        double scale = sqrt(((1-M_PI*M_PI)*(1-M_PI*M_PI)+4*M_PI*M_PI));
+        R_new << 1.0,                   0.0,                   0.0,
+                 0.0, (1.0-M_PI*M_PI)/scale,       -2.0*M_PI/scale,
+                 0.0,        2.0*M_PI/scale, (1.0-M_PI*M_PI)/scale;
+
+        ASSERT_TRUE(CompareMatrices(sphere_->state_.pose.translation(),
+                                    Vector3<double>{0, 0, 0},
+                                    TOLERANCE));
+        ASSERT_TRUE(CompareMatrices(sphere_->state_.pose.rotation().matrix(),
+                                    R_new, TOLERANCE));
     }
 
     void TestWallBC() {
