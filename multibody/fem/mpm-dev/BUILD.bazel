@@ -237,6 +237,7 @@ drake_cc_library(
         ":poisson_disk_sampling",
         "//common:essential",
         "//math:geometric_transform",
+        "//multibody/math:spatial_algebra",
     ],
 )
 

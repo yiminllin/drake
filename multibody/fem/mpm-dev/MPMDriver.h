@@ -18,11 +18,13 @@
 #include "drake/multibody/fem/mpm-dev/Particles.h"
 #include "drake/multibody/fem/mpm-dev/particles_to_bgeo.h"
 #include "drake/multibody/fem/mpm-dev/poisson_disk_sampling.h"
+#include "drake/multibody/math/spatial_algebra.h"
 
 namespace drake {
 namespace multibody {
 namespace mpm {
 
+// TODO(yiminlin.tri): Not tested.
 class MPMDriver {
  public:
     // Struct containing parameters describing the objects to be modelled in MPM
@@ -33,7 +35,9 @@ class MPMDriver {
         // Density and the initial velocity of the object, we assume the object
         // has uniform density and velocity.
         double density;
-        Vector3<double> initial_velocity;
+        // V_WB, The object B's spatial velocity measured and expressed in the
+        // world frame W.
+        multibody::SpatialVelocity<double> initial_velocity;
         // User defined parameter to control the minimum number of particles per
         // grid cell.
         int min_num_particles_per_cell;

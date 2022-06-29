@@ -84,9 +84,12 @@ int DoMain() {
     Vector3<double> translation_sphere = {1.8, 1.0, 0.5};
     math::RigidTransform<double> pose_sphere =
                             math::RigidTransform<double>(translation_sphere);
+    multibody::SpatialVelocity<double> velocity_sphere;
+    velocity_sphere.translational() = Vector3<double>::Zero();
+    velocity_sphere.rotational() = Vector3<double>{0.0, 0.0, 0.0};
     MPMDriver::MaterialParameters m_param_sphere { {8e4, 0.4},
                                                    1200,
-                                                   {0.0, 0.0, 0.0},
+                                                   velocity_sphere,
                                                    1
                                                  };
 
