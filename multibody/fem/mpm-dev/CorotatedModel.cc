@@ -4,16 +4,12 @@ namespace drake {
 namespace multibody {
 namespace mpm {
 
-CorotatedModel::CorotatedModel(): mu_(9e4), lambda_(0.49) {}
+CorotatedModel::CorotatedModel(): ConstitutiveModel() {}
 
-CorotatedModel::CorotatedModel(double E, double nu):
-    mu_(E/(2*(1+nu))), lambda_(E*nu/(1+nu)/(1-2*nu)) {
-        DRAKE_ASSERT(E >= 0);
-        DRAKE_ASSERT(nu > -1.0 && nu < 0.5);
-    }
+CorotatedModel::CorotatedModel(double E, double nu): ConstitutiveModel(E, nu) {}
 
 void CorotatedModel::CalcFirstPiolaKirchhoffStress(
-        const Matrix3<double>& F, EigenPtr<Matrix3<double>> P) const {
+        const Matrix3<double>& F, Matrix3<double>* P) const {
     Matrix3<double> R, S, JFinvT;
     double J = F.determinant();
     fem::internal::PolarDecompose<double>(F, &R, &S);
@@ -22,7 +18,7 @@ void CorotatedModel::CalcFirstPiolaKirchhoffStress(
 }
 
 void CorotatedModel::CalcKirchhoffStress(const Matrix3<double>& F,
-                                         EigenPtr<Matrix3<double>> tau) const {
+                                         Matrix3<double>* tau) const {
     Matrix3<double> R, S;
     double J = F.determinant();
     fem::internal::PolarDecompose<double>(F, &R, &S);
@@ -31,8 +27,8 @@ void CorotatedModel::CalcKirchhoffStress(const Matrix3<double>& F,
 }
 
 void CorotatedModel::CalcFirstPiolaKirchhoffStressAndKirchhoffStress(
-        const Matrix3<double>& F, EigenPtr<Matrix3<double>> P,
-        EigenPtr<Matrix3<double>> tau) const {
+        const Matrix3<double>& F, Matrix3<double>* P,
+        Matrix3<double>* tau) const {
     Matrix3<double> R, S, JFinvT;
     double J = F.determinant();
     fem::internal::PolarDecompose<double>(F, &R, &S);
@@ -44,4 +40,5 @@ void CorotatedModel::CalcFirstPiolaKirchhoffStressAndKirchhoffStress(
 }  // namespace mpm
 }  // namespace multibody
 }  // namespace drake
+
 

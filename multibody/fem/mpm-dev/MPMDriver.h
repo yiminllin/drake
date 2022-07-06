@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <iostream>
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
@@ -10,7 +11,7 @@
 #include "drake/common/eigen_types.h"
 #include "drake/math/rigid_transform.h"
 #include "drake/multibody/fem/mpm-dev/AnalyticLevelSet.h"
-#include "drake/multibody/fem/mpm-dev/CorotatedModel.h"
+#include "drake/multibody/fem/mpm-dev/ConstitutiveModel.h"
 #include "drake/multibody/fem/mpm-dev/GravitationalForce.h"
 #include "drake/multibody/fem/mpm-dev/Grid.h"
 #include "drake/multibody/fem/mpm-dev/MPMParameters.h"
@@ -30,7 +31,7 @@ class MPMDriver {
     // Struct containing parameters describing the objects to be modelled in MPM
     struct MaterialParameters {
         // Constitutive model of the object
-        CorotatedModel corotated_model;
+        std::unique_ptr<ConstitutiveModel> constitutive_model;
         // @pre density is positive
         // Density and the initial velocity of the object, we assume the object
         // has uniform density and velocity.

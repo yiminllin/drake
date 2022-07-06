@@ -1,9 +1,11 @@
 #pragma once
 
+#include <memory>
+#include <utility>
 #include <vector>
 
 #include "drake/common/eigen_types.h"
-#include "drake/multibody/fem/mpm-dev/CorotatedModel.h"
+#include "drake/multibody/fem/mpm-dev/ConstitutiveModel.h"
 #include "drake/multibody/fem/mpm-dev/MathUtils.h"
 #include "drake/multibody/fem/mpm-dev/TotalMassAndMomentum.h"
 
@@ -27,7 +29,6 @@ class Particles {
     const Matrix3<double>& get_deformation_gradient(int index) const;
     const Matrix3<double>& get_kirchhoff_stress(int index) const;
     const Matrix3<double>& get_B_matrix(int index) const;
-    const CorotatedModel& get_corotated_model(int index) const;
 
     const std::vector<Vector3<double>>& get_positions() const;
     const std::vector<Vector3<double>>& get_velocities() const;
@@ -53,7 +54,8 @@ class Particles {
     void set_kirchhoff_stress(int index,
                               const Matrix3<double>& kirchhoff_stress);
     void set_B_matrix(int index, const Matrix3<double>& B_matrix);
-    void set_corotated_model(int index, const CorotatedModel& corotated_model);
+    void set_constitutive_model(int index,
+                        std::unique_ptr<ConstitutiveModel> constitutive_model);
 
     void set_positions(const std::vector<Vector3<double>>& positions);
     void set_velocities(const std::vector<Vector3<double>>& velocities);
@@ -75,8 +77,8 @@ class Particles {
     // @pre new_order is a permutation of [0, ..., new_order.size()-1]
     void Reorder(const std::vector<size_t>& new_order);
 
-    // Add a particle with the given properties. The default corotated model is
-    // dough with Young's modulus E = 9e4 and Poisson ratio nu = 0.49.
+    // Add a particle with the given properties. The default material
+    // is dough with Young's modulus E = 9e4 and Poisson ratio nu = 0.49.
     // B_matrix denotes matrix B_p, who composes the affine matrix C_p in APIC:
     // v_i = v_p + C_p (x_i - x_p) = v_p + B_p D_p^-1 (x_i - x_p),
     void AddParticle(const Vector3<double>& position,
@@ -85,7 +87,7 @@ class Particles {
                      const Matrix3<double>& deformation_gradient,
                      const Matrix3<double>& kirchhoff_stress,
                      const Matrix3<double>& B_matrix,
-                     const CorotatedModel& corotated_model);
+                     std::unique_ptr<ConstitutiveModel> constitutive_model);
 
     // Assume the deformation gradient is updated, update Kirchhoff stress tau
     // with the constitutive relation
@@ -110,7 +112,7 @@ class Particles {
     std::vector<Matrix3<double>> kirchhoff_stresses_{};
     // The affine matrix B_p in APIC
     std::vector<Matrix3<double>> B_matrices_{};
-    std::vector<CorotatedModel> corotated_models_{};
+    std::vector<std::unique_ptr<ConstitutiveModel>> constitutive_models_{};
 };  // class Particles
 
 }  // namespace mpm

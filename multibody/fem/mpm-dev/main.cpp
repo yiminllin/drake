@@ -13,7 +13,9 @@
 #include "drake/common/filesystem.h"
 #include "drake/common/temp_directory.h"
 #include "drake/math/roll_pitch_yaw.h"
+#include "drake/multibody/fem/mpm-dev/CorotatedModel.h"
 #include "drake/multibody/fem/mpm-dev/MPMDriver.h"
+#include "drake/multibody/fem/mpm-dev/SaintVenantKirchhoffWithHenckyModel.h"
 #include "drake/multibody/math/spatial_velocity.h"
 
 namespace drake {
@@ -87,10 +89,12 @@ int DoMain() {
     multibody::SpatialVelocity<double> velocity_sphere;
     velocity_sphere.translational() = Vector3<double>::Zero();
     velocity_sphere.rotational() = Vector3<double>{0.0, 0.0, 0.0};
-    MPMDriver::MaterialParameters m_param_sphere { {8e4, 0.4},
-                                                   1200,
-                                                   velocity_sphere,
-                                                   1
+    std::unique_ptr<SaintVenantKirchhoffWithHenckyModel> constitutive_model
+            = std::make_unique<SaintVenantKirchhoffWithHenckyModel>(8e4, 0.4);
+    MPMDriver::MaterialParameters m_param_sphere{ std::move(constitutive_model),
+                                                  1200,
+                                                  velocity_sphere,
+                                                  1
                                                  };
 
     driver->InitializeKinematicCollisionObjects(std::move(objects));

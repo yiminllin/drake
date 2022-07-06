@@ -1,10 +1,14 @@
 #include "drake/multibody/fem/mpm-dev/Particles.h"
 
+#include <memory>
+#include <utility>
+
 #include <gtest/gtest.h>
 
 #include "drake/common/test_utilities/eigen_matrix_compare.h"
 #include "drake/math/roll_pitch_yaw.h"
 #include "drake/math/rotation_matrix.h"
+#include "drake/multibody/fem/mpm-dev/ConstitutiveModel.h"
 #include "drake/multibody/fem/mpm-dev/CorotatedModel.h"
 #include "drake/multibody/fem/mpm-dev/TotalMassAndMomentum.h"
 
@@ -26,7 +30,6 @@ GTEST_TEST(ParticlesClassTest, TestAddSetGet) {
     std::vector<Matrix3<double>> deformation_gradients;
     std::vector<Matrix3<double>> kirchhoff_stresses;
     std::vector<Matrix3<double>> B_matrices;
-    std::vector<CorotatedModel> corotated_models;
 
     Vector3<double> pos1 = {1.0, 2.0, 3.0};
     Vector3<double> vel1 = {-1.0, -2.0, -3.0};
@@ -35,7 +38,8 @@ GTEST_TEST(ParticlesClassTest, TestAddSetGet) {
     Matrix3<double> F1 = pos1.asDiagonal();
     Matrix3<double> stress1 = vel1.asDiagonal();
     Matrix3<double> B1 = 2.0*vel1.asDiagonal();
-    CorotatedModel cmodel1 = CorotatedModel(10.0, 0.1);
+    std::unique_ptr<CorotatedModel> cmodel1
+                                = std::make_unique<CorotatedModel>(10.0, 0.1);
 
     Vector3<double> pos2 = {3.0, -1.0, 6.0};
     Vector3<double> vel2 = {-9.0, 8.0, -2.0};
@@ -44,13 +48,16 @@ GTEST_TEST(ParticlesClassTest, TestAddSetGet) {
     Matrix3<double> F2 = pos2.asDiagonal();
     Matrix3<double> stress2 = vel2.asDiagonal();
     Matrix3<double> B2 = 2.0*vel2.asDiagonal();
-    CorotatedModel cmodel2 = CorotatedModel(20.0, 0.2);
+    std::unique_ptr<CorotatedModel> cmodel2
+                                = std::make_unique<CorotatedModel>(20.0, 0.2);
 
     Particles particles = Particles();
     EXPECT_EQ(particles.get_num_particles(), 0);
-    particles.AddParticle(pos1, vel1, mass1, vol1, F1, stress1, B1, cmodel1);
+    particles.AddParticle(pos1, vel1, mass1, vol1,
+                          F1, stress1, B1, std::move(cmodel1));
     EXPECT_EQ(particles.get_num_particles(), 1);
-    particles.AddParticle(pos2, vel2, mass2, vol2, F2, stress2, B2, cmodel2);
+    particles.AddParticle(pos2, vel2, mass2, vol2,
+                          F2, stress2, B2, std::move(cmodel2));
     EXPECT_EQ(particles.get_num_particles(), 2);
 
     // Test get individual element
@@ -158,7 +165,10 @@ GTEST_TEST(ParticlesClassTest, TestAddSetGet) {
     EXPECT_TRUE(CompareMatrices(particles.get_B_matrix(1), B2,
                 std::numeric_limits<double>::epsilon()));
 
-    particles.AddParticle(pos1, vel1, mass1, vol1, F1, stress1, B1, cmodel1);
+    std::unique_ptr<CorotatedModel> cmodel_dummy1
+                                = std::make_unique<CorotatedModel>(10.0, 0.1);
+    particles.AddParticle(pos1, vel1, mass1, vol1,
+                          F1, stress1, B1, std::move(cmodel_dummy1));
     EXPECT_EQ(particles.get_num_particles(), 3);
     EXPECT_TRUE(CompareMatrices(particles.get_position(2), pos1,
                 std::numeric_limits<double>::epsilon()));
@@ -210,7 +220,10 @@ GTEST_TEST(ParticlesClassTest, TestAddSetGet) {
     EXPECT_TRUE(CompareMatrices(particles.get_B_matrix(1), B2,
                 std::numeric_limits<double>::epsilon()));
 
-    particles.AddParticle(pos1, vel1, mass1, vol1, F1, stress1, B1, cmodel1);
+    std::unique_ptr<CorotatedModel> cmodel_dummy2
+                                = std::make_unique<CorotatedModel>(10.0, 0.1);
+    particles.AddParticle(pos1, vel1, mass1, vol1,
+                          F1, stress1, B1, std::move(cmodel_dummy2));
     EXPECT_EQ(particles.get_num_particles(), 3);
     EXPECT_TRUE(CompareMatrices(particles.get_position(2), pos1,
                 std::numeric_limits<double>::epsilon()));
@@ -241,7 +254,8 @@ GTEST_TEST(ParticlesClassTest, TestReorder) {
     Matrix3<double> F1 = pos1.asDiagonal();
     Matrix3<double> stress1 = vel1.asDiagonal();
     Matrix3<double> B1 = 2.0*vel1.asDiagonal();
-    CorotatedModel cmodel1 = CorotatedModel(10.0, 0.1);
+    std::unique_ptr<CorotatedModel> cmodel1
+                                = std::make_unique<CorotatedModel>(10.0, 0.1);
 
     Vector3<double> pos2 = {3.0, -1.0, 6.0};
     Vector3<double> vel2 = {-9.0, 8.0, -2.0};
@@ -250,7 +264,8 @@ GTEST_TEST(ParticlesClassTest, TestReorder) {
     Matrix3<double> F2 = pos2.asDiagonal();
     Matrix3<double> stress2 = vel2.asDiagonal();
     Matrix3<double> B2 = 2.0*vel2.asDiagonal();
-    CorotatedModel cmodel2 = CorotatedModel(20.0, 0.2);
+    std::unique_ptr<CorotatedModel> cmodel2
+                                = std::make_unique<CorotatedModel>(20.0, 0.2);
 
     Vector3<double> pos3 = {3.2, -1.0, 1.0};
     Vector3<double> vel3 = {2.0, -6.2, 8.0};
@@ -259,12 +274,16 @@ GTEST_TEST(ParticlesClassTest, TestReorder) {
     Matrix3<double> F3 = pos3.asDiagonal();
     Matrix3<double> stress3 = vel3.asDiagonal();
     Matrix3<double> B3 = 2.0*vel3.asDiagonal();
-    CorotatedModel cmodel3 = CorotatedModel(30.0, 0.3);
+    std::unique_ptr<CorotatedModel> cmodel3
+                                = std::make_unique<CorotatedModel>(30.0, 0.3);
 
     Particles particles = Particles();
-    particles.AddParticle(pos1, vel1, mass1, vol1, F1, stress1, B1, cmodel1);
-    particles.AddParticle(pos2, vel2, mass2, vol2, F2, stress2, B2, cmodel2);
-    particles.AddParticle(pos3, vel3, mass3, vol3, F3, stress3, B3, cmodel3);
+    particles.AddParticle(pos1, vel1, mass1, vol1,
+                          F1, stress1, B1, std::move(cmodel1));
+    particles.AddParticle(pos2, vel2, mass2, vol2,
+                          F2, stress2, B2, std::move(cmodel2));
+    particles.AddParticle(pos3, vel3, mass3, vol3,
+                          F3, stress3, B3, std::move(cmodel3));
 
     // Check the original ordering
     EXPECT_TRUE(CompareMatrices(particles.get_position(0), pos1, kEps));
@@ -353,7 +372,10 @@ GTEST_TEST(ParticlesClassTest, TestAdvectAndUpdateKirchhoffStress) {
     std::vector<double> reference_volumes;
     std::vector<Matrix3<double>> deformation_gradients;
     std::vector<Matrix3<double>> kirchhoff_stresses;
-    CorotatedModel coro_model = CorotatedModel(5.0, 0.25);
+    std::unique_ptr<CorotatedModel> coro_model1
+                                = std::make_unique<CorotatedModel>(5.0, 0.25);
+    std::unique_ptr<CorotatedModel> coro_model2
+                                = std::make_unique<CorotatedModel>(5.0, 0.25);
 
     const Matrix3<double> R =
         math::RotationMatrix<double>
@@ -385,8 +407,10 @@ GTEST_TEST(ParticlesClassTest, TestAdvectAndUpdateKirchhoffStress) {
     Matrix3<double> B2 = Matrix3<double>::Ones();
 
     Particles particles = Particles();
-    particles.AddParticle(pos1, vel1, mass1, vol1, F1, stress1, B1, coro_model);
-    particles.AddParticle(pos2, vel2, mass2, vol2, F2, stress2, B2, coro_model);
+    particles.AddParticle(pos1, vel1, mass1, vol1,
+                          F1, stress1, B1, std::move(coro_model1));
+    particles.AddParticle(pos2, vel2, mass2, vol2,
+                          F2, stress2, B2, std::move(coro_model2));
 
     // Advect particles
     double dt = 0.3;
@@ -413,7 +437,8 @@ GTEST_TEST(GridClassTest, TestGridSumState) {
     Matrix3<double> F0 = pos0.asDiagonal();
     Matrix3<double> stress0 = vel0.asDiagonal();
     Matrix3<double> B0 = vel0.asDiagonal();
-    CorotatedModel cmodel0 = CorotatedModel(10.0, 0.1);
+    std::unique_ptr<CorotatedModel> cmodel0
+                            = std::make_unique<CorotatedModel>(10.0, 0.1);
 
     Vector3<double> pos1 = {4.0, 5.0, 6.0};
     Vector3<double> vel1 = {-2.0, -2.0, -2.0};
@@ -422,7 +447,8 @@ GTEST_TEST(GridClassTest, TestGridSumState) {
     Matrix3<double> F1 = pos1.asDiagonal();
     Matrix3<double> stress1 = vel1.asDiagonal();
     Matrix3<double> B1 = 2.0*vel1.asDiagonal();
-    CorotatedModel cmodel1 = CorotatedModel(10.0, 0.1);
+    std::unique_ptr<CorotatedModel> cmodel1
+                            = std::make_unique<CorotatedModel>(10.0, 0.1);
 
     Vector3<double> pos2 = {7.0, 8.0, 9.0};
     Vector3<double> vel2 = {-3.0, -3.0, -3.0};
@@ -431,12 +457,16 @@ GTEST_TEST(GridClassTest, TestGridSumState) {
     Matrix3<double> F2 = pos2.asDiagonal();
     Matrix3<double> stress2 = vel2.asDiagonal();
     Matrix3<double> B2 = 3.0*vel2.asDiagonal();
-    CorotatedModel cmodel2 = CorotatedModel(20.0, 0.2);
+    std::unique_ptr<CorotatedModel> cmodel2
+                            = std::make_unique<CorotatedModel>(20.0, 0.2);
 
     Particles particles = Particles();
-    particles.AddParticle(pos0, vel0, mass0, vol0, F0, stress0, B0, cmodel0);
-    particles.AddParticle(pos1, vel1, mass1, vol1, F1, stress1, B1, cmodel1);
-    particles.AddParticle(pos2, vel2, mass2, vol2, F2, stress2, B2, cmodel2);
+    particles.AddParticle(pos0, vel0, mass0, vol0,
+                          F0, stress0, B0, std::move(cmodel0));
+    particles.AddParticle(pos1, vel1, mass1, vol1,
+                          F1, stress1, B1, std::move(cmodel1));
+    particles.AddParticle(pos2, vel2, mass2, vol2,
+                          F2, stress2, B2, std::move(cmodel2));
 
     TotalMassAndMomentum sum_state = particles.GetTotalMassAndMomentum();
 

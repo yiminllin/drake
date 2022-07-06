@@ -10,14 +10,17 @@ namespace drake {
 namespace multibody {
 namespace mpm {
 
-// A implementation of Fixed Corotated Model (Constitutive Model)
-class CorotatedModel : public ConstitutiveModel {
+// A implementation of Saint-Venant Kirchhoff model, but replace the left
+// Cauchy Green strain with the Hencky strain
+// https://dl.acm.org/doi/abs/10.1145/2897824.2925906
+// The formula of Kirchhoff stress can be found in Section 6.3
+class SaintVenantKirchhoffWithHenckyModel : public ConstitutiveModel {
  public:
-    CorotatedModel();
-    CorotatedModel(double E, double nu);
+    SaintVenantKirchhoffWithHenckyModel();
+    SaintVenantKirchhoffWithHenckyModel(double E, double nu);
 
     std::unique_ptr<ConstitutiveModel> Clone() const {
-        return std::make_unique<CorotatedModel>(*this);
+        return std::make_unique<SaintVenantKirchhoffWithHenckyModel>(*this);
     }
 
     void CalcFirstPiolaKirchhoffStress(
@@ -28,7 +31,7 @@ class CorotatedModel : public ConstitutiveModel {
     void CalcFirstPiolaKirchhoffStressAndKirchhoffStress(
         const Matrix3<double>& F, Matrix3<double>* P,
         Matrix3<double>* tau) const final;
-};  // class CorotatedModel
+};  // class SaintVenantKirchhoffWithHenckyModel
 
 }  // namespace mpm
 }  // namespace multibody

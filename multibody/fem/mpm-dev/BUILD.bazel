@@ -18,7 +18,9 @@ drake_cc_binary(
         "main.cpp",
     ],
     deps = [
+        ":CorotatedModel",
         ":MPMDriver",
+        ":SaintVenantKirchhoffWithHenckyModel",
         "//common:essential",
         "//math:geometric_transform",
         "@partio",
@@ -52,6 +54,20 @@ drake_cc_library(
 )
 
 drake_cc_library(
+    name = "ConstitutiveModel",
+    srcs = [
+        "ConstitutiveModel.cc",
+    ],
+    hdrs = [
+        "ConstitutiveModel.h",
+    ],
+    deps = [
+        "//common:essential",
+        "//multibody/fem:matrix_utilities",
+    ],
+)
+
+drake_cc_library(
     name = "CorotatedModel",
     srcs = [
         "CorotatedModel.cc",
@@ -60,6 +76,22 @@ drake_cc_library(
         "CorotatedModel.h",
     ],
     deps = [
+        ":ConstitutiveModel",
+        "//common:essential",
+        "//multibody/fem:matrix_utilities",
+    ],
+)
+
+drake_cc_library(
+    name = "SaintVenantKirchhoffWithHenckyModel",
+    srcs = [
+        "SaintVenantKirchhoffWithHenckyModel.cc",
+    ],
+    hdrs = [
+        "SaintVenantKirchhoffWithHenckyModel.h",
+    ],
+    deps = [
+        ":ConstitutiveModel",
         "//common:essential",
         "//multibody/fem:matrix_utilities",
     ],
@@ -74,7 +106,7 @@ drake_cc_library(
         "Particles.h",
     ],
     deps = [
-        ":CorotatedModel",
+        ":ConstitutiveModel",
         ":MathUtils",
         ":TotalMassAndMomentum",
         "//common:essential",
@@ -227,7 +259,7 @@ drake_cc_library(
     ],
     deps = [
         ":AnalyticLevelSet",
-        ":CorotatedModel",
+        ":ConstitutiveModel",
         ":GravitationalForce",
         ":Grid",
         ":MPMParameters",
@@ -270,6 +302,7 @@ drake_cc_googletest(
 drake_cc_googletest(
     name = "Particles_test",
     deps = [
+        ":CorotatedModel",
         ":Particles",
         ":TotalMassAndMomentum",
         "//common/test_utilities:eigen_matrix_compare",
@@ -290,9 +323,11 @@ drake_cc_googletest(
 )
 
 drake_cc_googletest(
-    name = "CorotatedModel_test",
+    name = "ConstitutiveModel_test",
     deps = [
+        ":ConstitutiveModel",
         ":CorotatedModel",
+        ":SaintVenantKirchhoffWithHenckyModel",
         "//common:essential",
         "//common/test_utilities:eigen_matrix_compare",
         "//math:geometric_transform",
@@ -332,6 +367,7 @@ drake_cc_googletest(
     name = "MPMTransfer_test",
     deps = [
         ":BSpline",
+        ":CorotatedModel",
         ":Grid",
         ":MPMTransfer",
         ":Particles",

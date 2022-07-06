@@ -14,7 +14,7 @@ Particles::Particles(int num_particles): num_particles_(num_particles),
                                          deformation_gradients_(num_particles),
                                          kirchhoff_stresses_(num_particles),
                                          B_matrices_(num_particles),
-                                         corotated_models_(num_particles) {
+                                         constitutive_models_(num_particles) {
     DRAKE_ASSERT(num_particles >= 0);
 }
 
@@ -48,10 +48,6 @@ const Matrix3<double>& Particles::get_kirchhoff_stress(int index) const {
 
 const Matrix3<double>& Particles::get_B_matrix(int index) const {
     return B_matrices_[index];
-}
-
-const CorotatedModel& Particles::get_corotated_model(int index) const {
-    return corotated_models_[index];
 }
 
 const std::vector<Vector3<double>>& Particles::get_positions() const {
@@ -115,9 +111,9 @@ void Particles::set_B_matrix(int index, const Matrix3<double>& B_matrix) {
     B_matrices_[index] = B_matrix;
 }
 
-void Particles::set_corotated_model(int index,
-                                    const CorotatedModel& corotated_model) {
-    corotated_models_[index] = corotated_model;
+void Particles::set_constitutive_model(int index,
+                        std::unique_ptr<ConstitutiveModel> constitutive_model) {
+    constitutive_models_[index] = std::move(constitutive_model);
 }
 
 void Particles::set_positions(const std::vector<Vector3<double>>& positions) {
@@ -161,7 +157,8 @@ void Particles::Reorder(const std::vector<size_t>& new_order) {
     std::vector<Matrix3<double>> deformation_gradients_sorted(num_particles_);
     std::vector<Matrix3<double>> kirchhoff_stresses_sorted(num_particles_);
     std::vector<Matrix3<double>> B_matrices_sorted(num_particles_);
-    std::vector<CorotatedModel> corotated_models_sorted(num_particles_);
+    std::vector<std::unique_ptr<ConstitutiveModel>>
+                                 constitutive_models_sorted(num_particles_);
     for (int p = 0; p < num_particles_; ++p) {
         p_new = new_order[p];
         positions_sorted[p]             = positions_[p_new];
@@ -171,7 +168,8 @@ void Particles::Reorder(const std::vector<size_t>& new_order) {
         deformation_gradients_sorted[p] = deformation_gradients_[p_new];
         kirchhoff_stresses_sorted[p]    = kirchhoff_stresses_[p_new];
         B_matrices_sorted[p]            = B_matrices_[p_new];
-        corotated_models_sorted[p]      = corotated_models_[p_new];
+        constitutive_models_sorted[p]   =
+                                        std::move(constitutive_models_[p_new]);
     }
     positions_.swap(positions_sorted);
     velocities_.swap(velocities_sorted);
@@ -180,7 +178,7 @@ void Particles::Reorder(const std::vector<size_t>& new_order) {
     deformation_gradients_.swap(deformation_gradients_sorted);
     kirchhoff_stresses_.swap(kirchhoff_stresses_sorted);
     B_matrices_.swap(B_matrices_sorted);
-    corotated_models_.swap(corotated_models_sorted);
+    constitutive_models_.swap(constitutive_models_sorted);
 }
 
 void Particles::AddParticle(const Vector3<double>& position,
@@ -189,7 +187,7 @@ void Particles::AddParticle(const Vector3<double>& position,
                             const Matrix3<double>& deformation_gradient,
                             const Matrix3<double>& kirchhoff_stress,
                             const Matrix3<double>& B_matrix,
-                            const CorotatedModel& corotated_model) {
+                        std::unique_ptr<ConstitutiveModel> constitutive_model) {
     positions_.emplace_back(position);
     velocities_.emplace_back(velocity);
     masses_.emplace_back(mass);
@@ -197,14 +195,14 @@ void Particles::AddParticle(const Vector3<double>& position,
     deformation_gradients_.emplace_back(deformation_gradient);
     kirchhoff_stresses_.emplace_back(kirchhoff_stress);
     B_matrices_.emplace_back(B_matrix);
-    corotated_models_.emplace_back(corotated_model);
+    constitutive_models_.emplace_back(std::move(constitutive_model));
     num_particles_++;
 }
 
 void Particles::UpdateKirchhoffStresses() {
     for (int p = 0; p < num_particles_; ++p) {
-        corotated_models_[p].CalcKirchhoffStress(deformation_gradients_[p],
-                                                 &kirchhoff_stresses_[p]);
+        constitutive_models_[p]->CalcKirchhoffStress(deformation_gradients_[p],
+                                                    &kirchhoff_stresses_[p]);
     }
 }
 
