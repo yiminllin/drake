@@ -331,11 +331,13 @@ void MPMTransfer::UpdateParticleStates(const std::array<BatchState, 27>&
     }
     }
 
-    // Update velocities and deformation gradients of the particle
+    // Update velocities and elastic deformation gradients of the particle
     // F_p^{n+1} = (I + dt*grad_vp_new)*F_p^n
-    particles->set_deformation_gradient(p,
+    // Note that we assume the plastic deformation gradient doesn't change
+    // during the evolution.
+    particles->set_elastic_deformation_gradient(p,
                         (Matrix3<double>::Identity() + dt*grad_vp_new)
-                        *particles->get_deformation_gradient(p));
+                        *particles->get_elastic_deformation_gradient(p));
     particles->set_velocity(p, vp_new);
     particles->set_B_matrix(p, Bp_new);
 }

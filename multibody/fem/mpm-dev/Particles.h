@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "drake/common/eigen_types.h"
-#include "drake/multibody/fem/mpm-dev/ConstitutiveModel.h"
+#include "drake/multibody/fem/mpm-dev/ElastoPlasticModel.h"
 #include "drake/multibody/fem/mpm-dev/MathUtils.h"
 #include "drake/multibody/fem/mpm-dev/TotalMassAndMomentum.h"
 
@@ -26,7 +26,7 @@ class Particles {
     const Vector3<double>& get_velocity(int index) const;
     const double& get_mass(int index) const;
     const double& get_reference_volume(int index) const;
-    const Matrix3<double>& get_deformation_gradient(int index) const;
+    const Matrix3<double>& get_elastic_deformation_gradient(int index) const;
     const Matrix3<double>& get_kirchhoff_stress(int index) const;
     const Matrix3<double>& get_B_matrix(int index) const;
 
@@ -34,7 +34,8 @@ class Particles {
     const std::vector<Vector3<double>>& get_velocities() const;
     const std::vector<double>& get_masses() const;
     const std::vector<double>& get_reference_volumes() const;
-    const std::vector<Matrix3<double>>& get_deformation_gradients() const;
+    const std::vector<Matrix3<double>>& get_elastic_deformation_gradients()
+                                                                        const;
     const std::vector<Matrix3<double>>& get_kirchhoff_stresses() const;
     // Get the matrix B_p, who composes the affine matrix C_p in APIC:
     // v_i = v_p + C_p (x_i - x_p) = v_p + B_p D_p^-1 (x_i - x_p),
@@ -49,20 +50,20 @@ class Particles {
     void set_velocity(int index, const Vector3<double>& velocity);
     void set_mass(int index, double mass);
     void set_reference_volume(int index, double reference_volume);
-    void set_deformation_gradient(int index,
-                                 const Matrix3<double>& deformation_gradient);
+    void set_elastic_deformation_gradient(int index,
+                           const Matrix3<double>& elastic_deformation_gradient);
     void set_kirchhoff_stress(int index,
                               const Matrix3<double>& kirchhoff_stress);
     void set_B_matrix(int index, const Matrix3<double>& B_matrix);
-    void set_constitutive_model(int index,
-                        std::unique_ptr<ConstitutiveModel> constitutive_model);
+    void set_elastoplastic_model(int index,
+                     std::unique_ptr<ElastoPlasticModel> elastoplastic_model);
 
     void set_positions(const std::vector<Vector3<double>>& positions);
     void set_velocities(const std::vector<Vector3<double>>& velocities);
     void set_masses(const std::vector<double>& masses);
     void set_reference_volumes(const std::vector<double>& reference_volumes);
-    void set_deformation_gradients(const std::vector<Matrix3<double>>&
-                                   deformation_gradients);
+    void set_elastic_deformation_gradients(const std::vector<Matrix3<double>>&
+                                           elastic_deformation_gradients);
     void set_kirchhoff_stresses(const std::vector<Matrix3<double>>&
                                 kirchhoff_stresses);
     // Set the matrix B_p, who composes the affine matrix C_p in APIC:
@@ -84,14 +85,16 @@ class Particles {
     void AddParticle(const Vector3<double>& position,
                      const Vector3<double>& velocity,
                      double mass, double reference_volume,
-                     const Matrix3<double>& deformation_gradient,
+                     const Matrix3<double>& elastic_deformation_gradient,
                      const Matrix3<double>& kirchhoff_stress,
                      const Matrix3<double>& B_matrix,
-                     std::unique_ptr<ConstitutiveModel> constitutive_model);
+                     std::unique_ptr<ElastoPlasticModel> elastoplastic_model);
 
-    // Assume the deformation gradient is updated, update Kirchhoff stress tau
-    // with the constitutive relation
-    void UpdateKirchhoffStresses();
+    // Assume the elastic deformation gradients are in their trial state
+    // (Fₑ = Fₑᵗʳⁱᵃˡ), update the elastic deformation gradients by projecting
+    // the elastic deformation gradient to the yield surface, and update
+    // Kirchhoff stress with the constitutive relation.
+    void ApplyPlasticityAndUpdateKirchhoffStresses();
 
     // Particle advection using the updated velocities, assuming they are
     // already updated in the member variables.
@@ -108,11 +111,11 @@ class Particles {
     std::vector<Vector3<double>> velocities_{};
     std::vector<double> masses_{};
     std::vector<double> reference_volumes_{};
-    std::vector<Matrix3<double>> deformation_gradients_{};
+    std::vector<Matrix3<double>> elastic_deformation_gradients_{};
     std::vector<Matrix3<double>> kirchhoff_stresses_{};
     // The affine matrix B_p in APIC
     std::vector<Matrix3<double>> B_matrices_{};
-    std::vector<std::unique_ptr<ConstitutiveModel>> constitutive_models_{};
+    std::vector<std::unique_ptr<ElastoPlasticModel>> elastoplastic_models_{};
 };  // class Particles
 
 }  // namespace mpm

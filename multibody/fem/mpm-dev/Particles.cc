@@ -11,10 +11,11 @@ Particles::Particles(int num_particles): num_particles_(num_particles),
                                          velocities_(num_particles),
                                          masses_(num_particles),
                                          reference_volumes_(num_particles),
-                                         deformation_gradients_(num_particles),
+                                         elastic_deformation_gradients_(
+                                                            num_particles),
                                          kirchhoff_stresses_(num_particles),
                                          B_matrices_(num_particles),
-                                         constitutive_models_(num_particles) {
+                                         elastoplastic_models_(num_particles) {
     DRAKE_ASSERT(num_particles >= 0);
 }
 
@@ -38,8 +39,9 @@ const double& Particles::get_reference_volume(int index) const {
     return reference_volumes_[index];
 }
 
-const Matrix3<double>& Particles::get_deformation_gradient(int index) const {
-    return deformation_gradients_[index];
+const Matrix3<double>& Particles::get_elastic_deformation_gradient(int index)
+                                                                        const {
+    return elastic_deformation_gradients_[index];
 }
 
 const Matrix3<double>& Particles::get_kirchhoff_stress(int index) const {
@@ -66,9 +68,10 @@ const std::vector<double>& Particles::get_reference_volumes() const {
     return reference_volumes_;
 }
 
-const std::vector<Matrix3<double>>& Particles::get_deformation_gradients()
+const std::vector<Matrix3<double>>&
+                            Particles::get_elastic_deformation_gradients()
                                                                         const {
-    return deformation_gradients_;
+    return elastic_deformation_gradients_;
 }
 
 const std::vector<Matrix3<double>>& Particles::get_kirchhoff_stresses() const {
@@ -97,9 +100,9 @@ void Particles::set_reference_volume(int index, double reference_volume) {
     reference_volumes_[index] = reference_volume;
 }
 
-void Particles::set_deformation_gradient(int index,
-                        const Matrix3<double>& deformation_gradient) {
-    deformation_gradients_[index] = deformation_gradient;
+void Particles::set_elastic_deformation_gradient(int index,
+                        const Matrix3<double>& elastic_deformation_gradient) {
+    elastic_deformation_gradients_[index] = elastic_deformation_gradient;
 }
 
 void Particles::set_kirchhoff_stress(int index,
@@ -111,9 +114,9 @@ void Particles::set_B_matrix(int index, const Matrix3<double>& B_matrix) {
     B_matrices_[index] = B_matrix;
 }
 
-void Particles::set_constitutive_model(int index,
-                        std::unique_ptr<ConstitutiveModel> constitutive_model) {
-    constitutive_models_[index] = std::move(constitutive_model);
+void Particles::set_elastoplastic_model(int index,
+                    std::unique_ptr<ElastoPlasticModel> elastoplastic_model) {
+    elastoplastic_models_[index] = std::move(elastoplastic_model);
 }
 
 void Particles::set_positions(const std::vector<Vector3<double>>& positions) {
@@ -133,9 +136,9 @@ void Particles::set_reference_volumes(const std::vector<double>&
     reference_volumes_ = reference_volumes;
 }
 
-void Particles::set_deformation_gradients(const std::vector<Matrix3<double>>&
-                                deformation_gradients) {
-    deformation_gradients_ = deformation_gradients;
+void Particles::set_elastic_deformation_gradients(
+            const std::vector<Matrix3<double>>& elastic_deformation_gradients) {
+    elastic_deformation_gradients_ = elastic_deformation_gradients;
 }
 
 void Particles::set_kirchhoff_stresses(const std::vector<Matrix3<double>>&
@@ -154,55 +157,59 @@ void Particles::Reorder(const std::vector<size_t>& new_order) {
     std::vector<Vector3<double>> velocities_sorted(num_particles_);
     std::vector<double> masses_sorted(num_particles_);
     std::vector<double> reference_volumes_sorted(num_particles_);
-    std::vector<Matrix3<double>> deformation_gradients_sorted(num_particles_);
+    std::vector<Matrix3<double>>
+                        elastic_deformation_gradients_sorted(num_particles_);
     std::vector<Matrix3<double>> kirchhoff_stresses_sorted(num_particles_);
     std::vector<Matrix3<double>> B_matrices_sorted(num_particles_);
-    std::vector<std::unique_ptr<ConstitutiveModel>>
-                                 constitutive_models_sorted(num_particles_);
+    std::vector<std::unique_ptr<ElastoPlasticModel>>
+                                 elastoplastic_models_sorted(num_particles_);
     for (int p = 0; p < num_particles_; ++p) {
         p_new = new_order[p];
-        positions_sorted[p]             = positions_[p_new];
-        velocities_sorted[p]            = velocities_[p_new];
-        masses_sorted[p]                = masses_[p_new];
-        reference_volumes_sorted[p]     = reference_volumes_[p_new];
-        deformation_gradients_sorted[p] = deformation_gradients_[p_new];
-        kirchhoff_stresses_sorted[p]    = kirchhoff_stresses_[p_new];
-        B_matrices_sorted[p]            = B_matrices_[p_new];
-        constitutive_models_sorted[p]   =
-                                        std::move(constitutive_models_[p_new]);
+        positions_sorted[p]                     = positions_[p_new];
+        velocities_sorted[p]                    = velocities_[p_new];
+        masses_sorted[p]                        = masses_[p_new];
+        reference_volumes_sorted[p]             = reference_volumes_[p_new];
+        elastic_deformation_gradients_sorted[p] =
+                                        elastic_deformation_gradients_[p_new];
+        kirchhoff_stresses_sorted[p]            = kirchhoff_stresses_[p_new];
+        B_matrices_sorted[p]                    = B_matrices_[p_new];
+        elastoplastic_models_sorted[p]          =
+                                        std::move(elastoplastic_models_[p_new]);
     }
     positions_.swap(positions_sorted);
     velocities_.swap(velocities_sorted);
     masses_.swap(masses_sorted);
     reference_volumes_.swap(reference_volumes_sorted);
-    deformation_gradients_.swap(deformation_gradients_sorted);
+    elastic_deformation_gradients_.swap(elastic_deformation_gradients_sorted);
     kirchhoff_stresses_.swap(kirchhoff_stresses_sorted);
     B_matrices_.swap(B_matrices_sorted);
-    constitutive_models_.swap(constitutive_models_sorted);
+    elastoplastic_models_.swap(elastoplastic_models_sorted);
 }
 
 void Particles::AddParticle(const Vector3<double>& position,
                             const Vector3<double>& velocity,
                             double mass, double reference_volume,
-                            const Matrix3<double>& deformation_gradient,
+                            const Matrix3<double>& elastic_deformation_gradient,
                             const Matrix3<double>& kirchhoff_stress,
                             const Matrix3<double>& B_matrix,
-                        std::unique_ptr<ConstitutiveModel> constitutive_model) {
+                    std::unique_ptr<ElastoPlasticModel> elastoplastic_model) {
     positions_.emplace_back(position);
     velocities_.emplace_back(velocity);
     masses_.emplace_back(mass);
     reference_volumes_.emplace_back(reference_volume);
-    deformation_gradients_.emplace_back(deformation_gradient);
+    elastic_deformation_gradients_.emplace_back(elastic_deformation_gradient);
     kirchhoff_stresses_.emplace_back(kirchhoff_stress);
     B_matrices_.emplace_back(B_matrix);
-    constitutive_models_.emplace_back(std::move(constitutive_model));
+    elastoplastic_models_.emplace_back(std::move(elastoplastic_model));
     num_particles_++;
 }
 
-void Particles::UpdateKirchhoffStresses() {
+void Particles::ApplyPlasticityAndUpdateKirchhoffStresses() {
     for (int p = 0; p < num_particles_; ++p) {
-        constitutive_models_[p]->CalcKirchhoffStress(deformation_gradients_[p],
-                                                    &kirchhoff_stresses_[p]);
+        elastoplastic_models_[p]->
+                            UpdateDeformationGradientAndCalcKirchhoffStress(
+                                            &kirchhoff_stresses_[p],
+                                            &elastic_deformation_gradients_[p]);
     }
 }
 

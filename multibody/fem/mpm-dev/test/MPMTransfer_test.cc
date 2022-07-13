@@ -3,8 +3,7 @@
 #include <gtest/gtest.h>
 
 #include "drake/common/test_utilities/eigen_matrix_compare.h"
-#include "drake/multibody/fem/mpm-dev/ConstitutiveModel.h"
-#include "drake/multibody/fem/mpm-dev/CorotatedModel.h"
+#include "drake/multibody/fem/mpm-dev/CorotatedElasticModel.h"
 #include "drake/multibody/fem/mpm-dev/MathUtils.h"
 #include "drake/multibody/fem/mpm-dev/TotalMassAndMomentum.h"
 
@@ -626,38 +625,38 @@ class MPMTransferTest : public ::testing::Test {
         Vector3<double> vel1 = {-1.0, -2.0, -3.0};
         double mass1 = 5.0;
         double vol1  = 10.0;
-        Matrix3<double> F1 = pos1.asDiagonal();
+        Matrix3<double> FE1 = pos1.asDiagonal();
         Matrix3<double> stress1 = vel1.asDiagonal();
         Matrix3<double> B1 = Matrix3<double>::Zero();
-        std::unique_ptr<CorotatedModel> cmodel1 =
-                                        std::make_unique<CorotatedModel>();
+        std::unique_ptr<CorotatedElasticModel> cmodel1 =
+                                    std::make_unique<CorotatedElasticModel>();
 
         Vector3<double> pos2 = {0.3, -0.1, 0.6};
         Vector3<double> vel2 = {-9.0, 8.0, -2.0};
         double mass2 = 7.0;
         double vol2  = 3.0;
-        Matrix3<double> F2 = pos2.asDiagonal();
+        Matrix3<double> FE2 = pos2.asDiagonal();
         Matrix3<double> stress2 = vel2.asDiagonal();
         Matrix3<double> B2 = Matrix3<double>::Zero();
-        std::unique_ptr<CorotatedModel> cmodel2 =
-                                        std::make_unique<CorotatedModel>();
+        std::unique_ptr<CorotatedElasticModel> cmodel2 =
+                                    std::make_unique<CorotatedElasticModel>();
 
         Vector3<double> pos3 = {0.2, -0.5, 0.3};
         Vector3<double> vel3 = {2.0, -6.2, 8.0};
         double mass3 = 2.0;
         double vol3  = 12.0;
-        Matrix3<double> F3 = pos3.asDiagonal();
+        Matrix3<double> FE3 = pos3.asDiagonal();
         Matrix3<double> stress3 = vel3.asDiagonal();
         Matrix3<double> B3 = Matrix3<double>::Zero();
-        std::unique_ptr<CorotatedModel> cmodel3 =
-                                        std::make_unique<CorotatedModel>();
+        std::unique_ptr<CorotatedElasticModel> cmodel3 =
+                                    std::make_unique<CorotatedElasticModel>();
 
         particles_->AddParticle(pos1, vel1, mass1, vol1,
-                                F1, stress1, B1, std::move(cmodel1));
+                                FE1, stress1, B1, std::move(cmodel1));
         particles_->AddParticle(pos2, vel2, mass2, vol2,
-                                F2, stress2, B2, std::move(cmodel2));
+                                FE2, stress2, B2, std::move(cmodel2));
         particles_->AddParticle(pos3, vel3, mass3, vol3,
-                                F3, stress3, B3, std::move(cmodel3));
+                                FE3, stress3, B3, std::move(cmodel3));
 
         num_particles = particles_->get_num_particles();
         TotalMassAndMomentum sum_particles_state
@@ -676,7 +675,7 @@ class MPMTransferTest : public ::testing::Test {
         ExpectConservation(sum_grid_state, sum_particles_state);
     }
 
-    void checkG2PDeformationGrad() {
+    void checkG2PElasticDeformationGrad() {
         // Construct a grid of 3x3x3 on [-2,2]^3, and place 1 particles
         // at the center
         //        -2   0   2
@@ -706,10 +705,10 @@ class MPMTransferTest : public ::testing::Test {
         F_p   = 2.0*Matrix3<double>::Identity();
         particles_->set_position(0, grid_->get_position(0, 0, 0));
         particles_->set_mass(0, mass_p);
-        particles_->set_deformation_gradient(0, F_p);
+        particles_->set_elastic_deformation_gradient(0, F_p);
 
         // Initialize the grid velocity field. We assume it is constant,
-        // so the deformation gradient would not change
+        // so the elastic deformation gradient would not change
         for (int k = bottom_corner(2);
                  k < bottom_corner(2)+num_gridpt_1D(2); ++k) {
         for (int j = bottom_corner(1);
@@ -728,11 +727,11 @@ class MPMTransferTest : public ::testing::Test {
         // Grid to particles transfer
         mpm_transfer_->TransferGridToParticles(*grid_, dt, particles_.get());
 
-        // Since the velocity field is constant, the deformation gradient
-        // doesn't change with respect to time
+        // Since the velocity field is constant, the elastic deformation
+        // gradient doesn't change with respect to time
         EXPECT_TRUE(CompareMatrices(F_p,
-                                    particles_->get_deformation_gradient(0),
-                                    TOLERANCE));
+                                particles_->get_elastic_deformation_gradient(0),
+                                TOLERANCE));
         EXPECT_TRUE(CompareMatrices(velocity_i, particles_->get_velocity(0),
                                     TOLERANCE));
     }
@@ -868,7 +867,7 @@ TEST_F(MPMTransferTest, P2GTest) {
 }
 
 TEST_F(MPMTransferTest, G2PTest) {
-    checkG2PDeformationGrad();
+    checkG2PElasticDeformationGrad();
     checkG2PMassVelocity1();
     checkG2PMassVelocity2();
 }

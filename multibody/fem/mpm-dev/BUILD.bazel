@@ -18,9 +18,9 @@ drake_cc_binary(
         "main.cpp",
     ],
     deps = [
-        ":CorotatedModel",
+        ":CorotatedElasticModel",
         ":MPMDriver",
-        ":SaintVenantKirchhoffWithHenckyModel",
+        ":StvkHenckyWithVonMisesModel",
         "//common:essential",
         "//math:geometric_transform",
         "@partio",
@@ -54,12 +54,12 @@ drake_cc_library(
 )
 
 drake_cc_library(
-    name = "ConstitutiveModel",
+    name = "ElastoPlasticModel",
     srcs = [
-        "ConstitutiveModel.cc",
+        "ElastoPlasticModel.cc",
     ],
     hdrs = [
-        "ConstitutiveModel.h",
+        "ElastoPlasticModel.h",
     ],
     deps = [
         "//common:essential",
@@ -68,30 +68,30 @@ drake_cc_library(
 )
 
 drake_cc_library(
-    name = "CorotatedModel",
+    name = "CorotatedElasticModel",
     srcs = [
-        "CorotatedModel.cc",
+        "CorotatedElasticModel.cc",
     ],
     hdrs = [
-        "CorotatedModel.h",
+        "CorotatedElasticModel.h",
     ],
     deps = [
-        ":ConstitutiveModel",
+        ":ElastoPlasticModel",
         "//common:essential",
         "//multibody/fem:matrix_utilities",
     ],
 )
 
 drake_cc_library(
-    name = "SaintVenantKirchhoffWithHenckyModel",
+    name = "StvkHenckyWithVonMisesModel",
     srcs = [
-        "SaintVenantKirchhoffWithHenckyModel.cc",
+        "StvkHenckyWithVonMisesModel.cc",
     ],
     hdrs = [
-        "SaintVenantKirchhoffWithHenckyModel.h",
+        "StvkHenckyWithVonMisesModel.h",
     ],
     deps = [
-        ":ConstitutiveModel",
+        ":ElastoPlasticModel",
         "//common:essential",
         "//multibody/fem:matrix_utilities",
     ],
@@ -106,7 +106,7 @@ drake_cc_library(
         "Particles.h",
     ],
     deps = [
-        ":ConstitutiveModel",
+        ":ElastoPlasticModel",
         ":MathUtils",
         ":TotalMassAndMomentum",
         "//common:essential",
@@ -259,7 +259,7 @@ drake_cc_library(
     ],
     deps = [
         ":AnalyticLevelSet",
-        ":ConstitutiveModel",
+        ":ElastoPlasticModel",
         ":GravitationalForce",
         ":Grid",
         ":MPMParameters",
@@ -302,8 +302,9 @@ drake_cc_googletest(
 drake_cc_googletest(
     name = "Particles_test",
     deps = [
-        ":CorotatedModel",
+        ":CorotatedElasticModel",
         ":Particles",
+        ":StvkHenckyWithVonMisesModel",
         ":TotalMassAndMomentum",
         "//common/test_utilities:eigen_matrix_compare",
         "//math:geometric_transform",
@@ -323,11 +324,11 @@ drake_cc_googletest(
 )
 
 drake_cc_googletest(
-    name = "ConstitutiveModel_test",
+    name = "ElastoPlasticModel_test",
     deps = [
-        ":ConstitutiveModel",
-        ":CorotatedModel",
-        ":SaintVenantKirchhoffWithHenckyModel",
+        ":CorotatedElasticModel",
+        ":ElastoPlasticModel",
+        ":StvkHenckyWithVonMisesModel",
         "//common:essential",
         "//common/test_utilities:eigen_matrix_compare",
         "//math:geometric_transform",
@@ -367,7 +368,7 @@ drake_cc_googletest(
     name = "MPMTransfer_test",
     deps = [
         ":BSpline",
-        ":CorotatedModel",
+        ":CorotatedElasticModel",
         ":Grid",
         ":MPMTransfer",
         ":Particles",

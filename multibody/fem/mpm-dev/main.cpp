@@ -13,9 +13,9 @@
 #include "drake/common/filesystem.h"
 #include "drake/common/temp_directory.h"
 #include "drake/math/roll_pitch_yaw.h"
-#include "drake/multibody/fem/mpm-dev/CorotatedModel.h"
+#include "drake/multibody/fem/mpm-dev/CorotatedElasticModel.h"
 #include "drake/multibody/fem/mpm-dev/MPMDriver.h"
-#include "drake/multibody/fem/mpm-dev/SaintVenantKirchhoffWithHenckyModel.h"
+#include "drake/multibody/fem/mpm-dev/StvkHenckyWithVonMisesModel.h"
 #include "drake/multibody/math/spatial_velocity.h"
 
 namespace drake {
@@ -28,12 +28,12 @@ int DoMain() {
     };
 
     MPMParameters::SolverParameters s_param {
-        3e-0,                                  // End time
+        2e-0,                                  // End time
         5e-4,                                  // Time step size
         0.1,                                   // Grid size
-        Vector3<int>(23, 23, 23),              // Number of grid points in each
+        Vector3<int>(30, 30, 30),              // Number of grid points in each
                                                // direction
-        Vector3<int>(-1, -1, -1),              // Bottom corner of the grid
+        Vector3<int>(-5, -5, -5),              // Bottom corner of the grid
     };
 
     MPMParameters::IOParameters io_param {
@@ -73,7 +73,7 @@ int DoMain() {
                             std::make_unique<CylinderLevelSet>(cylinder_height,
                                                                cylinder_radius);
     math::RollPitchYaw cylinder_rpw = {M_PI/2.0, 0.0, 0.0};
-    Vector3<double> cylinder_translation = {2.5, 1.0, 0.6};
+    Vector3<double> cylinder_translation = {2.5, 1.0, 0.5};
     math::RigidTransform<double> cylinder_pose =
             math::RigidTransform<double>(cylinder_rpw, cylinder_translation);
     objects.AddCollisionObject(std::move(cylinder_level_set),
@@ -89,13 +89,19 @@ int DoMain() {
     multibody::SpatialVelocity<double> velocity_sphere;
     velocity_sphere.translational() = Vector3<double>::Zero();
     velocity_sphere.rotational() = Vector3<double>{0.0, 0.0, 0.0};
-    std::unique_ptr<SaintVenantKirchhoffWithHenckyModel> constitutive_model
-            = std::make_unique<SaintVenantKirchhoffWithHenckyModel>(8e4, 0.4);
-    MPMDriver::MaterialParameters m_param_sphere{ std::move(constitutive_model),
-                                                  1200,
-                                                  velocity_sphere,
-                                                  1
-                                                 };
+
+    double E = 8e4;
+    double nu = 0.49;
+    double yield_stress = 0.1*E;
+    std::unique_ptr<StvkHenckyWithVonMisesModel> elastoplastic_model
+            = std::make_unique<StvkHenckyWithVonMisesModel>(E, nu,
+                                                            yield_stress);
+    MPMDriver::MaterialParameters m_param_sphere{
+                                                std::move(elastoplastic_model),
+                                                1200,
+                                                velocity_sphere,
+                                                1
+                                                };
 
     driver->InitializeKinematicCollisionObjects(std::move(objects));
     driver->InitializeParticles(level_set_sphere, pose_sphere,

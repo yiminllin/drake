@@ -11,7 +11,7 @@
 #include "drake/common/eigen_types.h"
 #include "drake/math/rigid_transform.h"
 #include "drake/multibody/fem/mpm-dev/AnalyticLevelSet.h"
-#include "drake/multibody/fem/mpm-dev/ConstitutiveModel.h"
+#include "drake/multibody/fem/mpm-dev/ElastoPlasticModel.h"
 #include "drake/multibody/fem/mpm-dev/GravitationalForce.h"
 #include "drake/multibody/fem/mpm-dev/Grid.h"
 #include "drake/multibody/fem/mpm-dev/MPMParameters.h"
@@ -30,8 +30,8 @@ class MPMDriver {
  public:
     // Struct containing parameters describing the objects to be modelled in MPM
     struct MaterialParameters {
-        // Constitutive model of the object
-        std::unique_ptr<ConstitutiveModel> constitutive_model;
+        // Elastoplastic model of the object
+        std::unique_ptr<ElastoPlasticModel> elastoplastic_model;
         // @pre density is positive
         // Density and the initial velocity of the object, we assume the object
         // has uniform density and velocity.

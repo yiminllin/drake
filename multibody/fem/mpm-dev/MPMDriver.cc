@@ -117,14 +117,16 @@ void MPMDriver::InitializeParticles(const AnalyticLevelSet& level_set,
     for (int p = 0; p < num_particles; ++p) {
         const Vector3<double>& xp = particles_positions[p];
         const Vector3<double>& vp = particles_velocities[p];
-        Matrix3<double> deformation_grad_p = Matrix3<double>::Identity();
+        Matrix3<double> elastic_deformation_grad_p
+                                                = Matrix3<double>::Identity();
         Matrix3<double> kirchhoff_stress_p = Matrix3<double>::Identity();
         Matrix3<double> B_p                = Matrix3<double>::Zero();
-        std::unique_ptr<ConstitutiveModel> constitutive_model_p
-                                        = m_param.constitutive_model->Clone();
+        std::unique_ptr<ElastoPlasticModel> elastoplastic_model_p
+                                        = m_param.elastoplastic_model->Clone();
         particles_.AddParticle(xp, vp, init_m, reference_volume_p,
-                               deformation_grad_p, kirchhoff_stress_p,
-                               B_p, std::move(constitutive_model_p));
+                               elastic_deformation_grad_p,
+                               kirchhoff_stress_p,
+                               B_p, std::move(elastoplastic_model_p));
     }
 }
 
@@ -148,8 +150,8 @@ void MPMDriver::checkCFL(double dt) {
 }
 
 void MPMDriver::AdvanceOneTimeStep(double dt) {
-    // Update Stresses on particles
-    particles_.UpdateKirchhoffStresses();
+    // Apply plasticity and update Kirchhoff stress on particles
+    particles_.ApplyPlasticityAndUpdateKirchhoffStresses();
 
     // Set up the transfer routines (Preallocations, sort the particles)
     mpm_transfer_.SetUpTransfer(grid_, &particles_);
