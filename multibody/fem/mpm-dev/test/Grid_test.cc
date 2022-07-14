@@ -54,14 +54,24 @@ GTEST_TEST(GridClassTest, TestSetGet) {
 
     EXPECT_TRUE(CompareMatrices(grid.get_velocity(1, 1, 1),
                                 Vector3<double>(31.0, -31.0, 31.0)));
+    EXPECT_TRUE(CompareMatrices(grid.get_velocity(grid.Reduce3DIndex(1, 1, 1)),
+                                Vector3<double>(31.0, -31.0, 31.0)));
     EXPECT_TRUE(CompareMatrices(grid.get_force(1, 1, 1),
                                 Vector3<double>(-31.0, 31.0, -31.0)));
+    EXPECT_TRUE(CompareMatrices(grid.get_force(grid.Reduce3DIndex(1, 1, 1)),
+                                Vector3<double>(-31.0, 31.0, -31.0)));
     EXPECT_EQ(grid.get_mass(1, 1, 1), 31.0);
+    EXPECT_EQ(grid.get_mass(grid.Reduce3DIndex(1, 1, 1)), 31.0);
     EXPECT_TRUE(CompareMatrices(grid.get_velocity(4, 2, 2),
+                                Vector3<double>(64.0, -64.0, 64.0)));
+    EXPECT_TRUE(CompareMatrices(grid.get_velocity(grid.Reduce3DIndex(4, 2, 2)),
                                 Vector3<double>(64.0, -64.0, 64.0)));
     EXPECT_TRUE(CompareMatrices(grid.get_force(4, 2, 2),
                                 Vector3<double>(-64.0, 64.0, -64.0)));
+    EXPECT_TRUE(CompareMatrices(grid.get_force(grid.Reduce3DIndex(4, 2, 2)),
+                                Vector3<double>(-64.0, 64.0, -64.0)));
     EXPECT_EQ(grid.get_mass(4, 2, 2), 64.0);
+    EXPECT_EQ(grid.get_mass(grid.Reduce3DIndex(4, 2, 2)), 64.0);
 
     // Test on a new grid
     num_gridpt_1D = {3, 3, 3};
@@ -398,10 +408,12 @@ GTEST_TEST(GridClassTest, TestWallBoundaryConditionWithHalfSpace) {
     objects.AddCollisionObject(std::move(bottom_wall_level_set),
                                std::move(bottom_wall_pose), zero_velocity, mu);
 
-    // Populate the grid with nonzero velocities
+    // Populate the grid with nonzero velocities, nonzero mass
+    double dummy_mass = 1.0;
     for (int k = bottom_corner(2); k < bottom_corner(2)+num_gridpt_1D(2); ++k) {
     for (int j = bottom_corner(1); j < bottom_corner(1)+num_gridpt_1D(1); ++j) {
     for (int i = bottom_corner(0); i < bottom_corner(0)+num_gridpt_1D(0); ++i) {
+        grid.set_mass(i, j, k, dummy_mass);
         grid.set_velocity(i, j, k, velocity_grid);
         EXPECT_TRUE(!grid.get_velocity(i, j, k).isZero());
     }
@@ -521,9 +533,11 @@ GTEST_TEST(GridClassTest, TestWallBoundaryConditionWithBox) {
                                std::move(bottom_wall_pose), zero_velocity, mu);
 
     // Populate the grid with nonzero velocities
+    double dummy_mass = 1.0;
     for (int k = bottom_corner(2); k < bottom_corner(2)+num_gridpt_1D(2); ++k) {
     for (int j = bottom_corner(1); j < bottom_corner(1)+num_gridpt_1D(1); ++j) {
     for (int i = bottom_corner(0); i < bottom_corner(0)+num_gridpt_1D(0); ++i) {
+        grid.set_mass(i, j, k, dummy_mass);
         grid.set_velocity(i, j, k, velocity_grid);
         EXPECT_TRUE(!grid.get_velocity(i, j, k).isZero());
     }
@@ -607,9 +621,11 @@ GTEST_TEST(GridClassTest, TestRotatedPlaneBC) {
                                zero_velocity, mu);
 
     // Populate the grid with nonzero velocities
+    double dummy_mass = 1.0;
     for (int k = bottom_corner(2); k < bottom_corner(2)+num_gridpt_1D(2); ++k) {
     for (int j = bottom_corner(1); j < bottom_corner(1)+num_gridpt_1D(1); ++j) {
     for (int i = bottom_corner(0); i < bottom_corner(0)+num_gridpt_1D(0); ++i) {
+        grid.set_mass(i, j, k, dummy_mass);
         grid.set_velocity(i, j, k, velocity_grid);
         EXPECT_TRUE(!grid.get_velocity(i, j, k).isZero());
     }
@@ -679,9 +695,11 @@ GTEST_TEST(GridClassTest, TestMovingCylindricalBC) {
                                cylinder_velocity, cylinder_mu);
 
     // Populate the grid with nonzero velocities
+    double dummy_mass = 1.0;
     for (int k = bottom_corner(2); k < bottom_corner(2)+num_gridpt_1D(2); ++k) {
     for (int j = bottom_corner(1); j < bottom_corner(1)+num_gridpt_1D(1); ++j) {
     for (int i = bottom_corner(0); i < bottom_corner(0)+num_gridpt_1D(0); ++i) {
+        grid.set_mass(i, j, k, dummy_mass);
         grid.set_velocity(i, j, k, velocity_grid);
         EXPECT_TRUE(!grid.get_velocity(i, j, k).isZero());
     }

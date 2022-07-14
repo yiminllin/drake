@@ -108,8 +108,7 @@ class MPMTransfer {
     // Evaluate (27) bases neighboring to the given batch, at the p-th particle
     // with position xp, and put the results into preallocated vectors
     void EvalBasisOnBatch(int p, const Vector3<double>& xp, const Grid& grid,
-                          const Vector3<int>& batch_index_3d,
-                          const std::vector<BSpline>& bases);
+                          const Vector3<int>& batch_index_3d);
 
     // At a particular particle p in batch with batch_index_3d, transfer
     // particle states (m, mv, tau) to (m, mv, f). Note that we temporarily

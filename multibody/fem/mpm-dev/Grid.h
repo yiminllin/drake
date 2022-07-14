@@ -60,9 +60,17 @@ class Grid {
     const Vector3<double>& get_force(int i, int j, int k) const;
     const std::vector<std::pair<int, Vector3<int>>>& get_indices() const;
 
+    const Vector3<double>& get_velocity(int idx_flat) const;
+    double get_mass(int idx_flat) const;
+    const Vector3<double>& get_force(int idx_flat) const;
+
     void set_velocity(int i, int j, int k, const Vector3<double>& velocity);
     void set_mass(int i, int j, int k, double mass);
     void set_force(int i, int j, int k, const Vector3<double>& force);
+
+    void set_velocity(int idx_flat, const Vector3<double>& velocity);
+    void set_mass(int idx_flat, double mass);
+    void set_force(int idx_flat, const Vector3<double>& force);
 
     // Accumulate the state at (i, j, k) with the given value
     void AccumulateVelocity(int i, int j, int k,

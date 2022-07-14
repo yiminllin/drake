@@ -70,6 +70,21 @@ const Vector3<double>& Grid::get_force(int i, int j, int k) const {
     return forces_[Reduce3DIndex(i, j, k)];
 }
 
+const Vector3<double>& Grid::get_velocity(int idx_flat) const {
+    DRAKE_ASSERT(idx_flat >= 0 && idx_flat < num_gridpt_);
+    return velocities_[idx_flat];
+}
+
+double Grid::get_mass(int idx_flat) const {
+    DRAKE_ASSERT(idx_flat >= 0 && idx_flat < num_gridpt_);
+    return masses_[idx_flat];
+}
+
+const Vector3<double>& Grid::get_force(int idx_flat) const {
+    DRAKE_ASSERT(idx_flat >= 0 && idx_flat < num_gridpt_);
+    return forces_[idx_flat];
+}
+
 void Grid::set_velocity(int i, int j, int k, const Vector3<double>& velocity) {
     DRAKE_ASSERT(in_index_range(i, j, k));
     velocities_[Reduce3DIndex(i, j, k)] = velocity;
@@ -83,6 +98,21 @@ void Grid::set_mass(int i, int j, int k, double mass) {
 void Grid::set_force(int i, int j, int k, const Vector3<double>& force) {
     DRAKE_ASSERT(in_index_range(i, j, k));
     forces_[Reduce3DIndex(i, j, k)] = force;
+}
+
+void Grid::set_velocity(int idx_flat, const Vector3<double>& velocity) {
+    DRAKE_ASSERT(idx_flat >= 0 && idx_flat < num_gridpt_);
+    velocities_[idx_flat] = velocity;
+}
+
+void Grid::set_mass(int idx_flat, double mass) {
+    DRAKE_ASSERT(idx_flat >= 0 && idx_flat < num_gridpt_);
+    masses_[idx_flat] = mass;
+}
+
+void Grid::set_force(int idx_flat, const Vector3<double>& force) {
+    DRAKE_ASSERT(idx_flat >= 0 && idx_flat < num_gridpt_);
+    forces_[idx_flat] = force;
 }
 
 void Grid::AccumulateVelocity(int i, int j, int k,
@@ -164,16 +194,23 @@ bool Grid::in_index_range(const Vector3<int>& index_3d) const {
 
 void Grid::UpdateVelocity(double dt) {
     for (int i = 0; i < num_gridpt_; ++i) {
-        velocities_[i] += dt*forces_[i]/masses_[i];
+        // Only update at grid points with nonzero masses
+        if (masses_[i] > 0.0) {
+            velocities_[i] += dt*forces_[i]/masses_[i];
+        }
     }
 }
 
 void Grid::EnforceBoundaryCondition(const KinematicCollisionObjects& objects) {
     // For all grid points, enforce frictional wall boundary condition
     for (const auto& [index_flat, index_3d] : indices_) {
-        objects.ApplyBoundaryConditions(get_position(index_3d(0), index_3d(1),
-                                                     index_3d(2)),
-                                        &velocities_[index_flat]);
+        // Only enforce at grid points with nonzero masses
+        if (masses_[index_flat] > 0.0) {
+            objects.ApplyBoundaryConditions(get_position(index_3d(0),
+                                                         index_3d(1),
+                                                         index_3d(2)),
+                                            &velocities_[index_flat]);
+        }
     }
 }
 

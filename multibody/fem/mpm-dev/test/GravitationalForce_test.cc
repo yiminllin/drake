@@ -23,7 +23,7 @@ GTEST_TEST(GravitationalForce, TestApplyGravitationalForces) {
     for (const auto& [batch_index_flat, batch_index_3d] : grid.get_indices()) {
         Vector3<double> velocity_i =
                             batch_index_flat*Vector3<double>(1.0, 1.0, 1.0);
-        double mass_i = batch_index_flat;
+        double mass_i = batch_index_flat + 1.0;
         grid.set_velocity(batch_index_3d(0), batch_index_3d(1),
                           batch_index_3d(2), velocity_i);
         grid.set_mass(batch_index_3d(0), batch_index_3d(1),
@@ -38,7 +38,7 @@ GTEST_TEST(GravitationalForce, TestApplyGravitationalForces) {
         Vector3<double> velocity_exact =
                             batch_index_flat*Vector3<double>(1.0, 1.0, 1.0)
                           + dt*Vector3<double>(0.0, 0.0, -9.81);
-        double mass_exact = batch_index_flat;
+        double mass_exact = batch_index_flat + 1.0;
         EXPECT_EQ(mass_exact, grid.get_mass(batch_index_3d(0),
                                             batch_index_3d(1),
                                             batch_index_3d(2)));
@@ -58,7 +58,7 @@ GTEST_TEST(GravitationalForce, TestApplyGravitationalForces) {
         Vector3<double> velocity_exact =
                             batch_index_flat*Vector3<double>(1.0, 1.0, 1.0)
                           + dt*g + dt*Vector3<double>(0.0, 0.0, -9.81);
-        double mass_exact = batch_index_flat;
+        double mass_exact = batch_index_flat + 1.0;
         EXPECT_EQ(mass_exact, grid.get_mass(batch_index_3d(0),
                                             batch_index_3d(1),
                                             batch_index_3d(2)));
