@@ -199,6 +199,16 @@ drake_cc_library(
 )
 
 drake_cc_library(
+    name = "MPMRunTimeStatistics",
+    hdrs = [
+        "MPMRunTimeStatistics.h",
+    ],
+    deps = [
+        "//common:essential",
+    ],
+)
+
+drake_cc_library(
     name = "MPMTransfer",
     srcs = [
         "MPMTransfer.cc",
@@ -263,6 +273,7 @@ drake_cc_library(
         ":GravitationalForce",
         ":Grid",
         ":MPMParameters",
+        ":MPMRunTimeStatistics",
         ":MPMTransfer",
         ":Particles",
         ":particles_to_bgeo",

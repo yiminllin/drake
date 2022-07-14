@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -15,6 +16,7 @@
 #include "drake/multibody/fem/mpm-dev/GravitationalForce.h"
 #include "drake/multibody/fem/mpm-dev/Grid.h"
 #include "drake/multibody/fem/mpm-dev/MPMParameters.h"
+#include "drake/multibody/fem/mpm-dev/MPMRunTimeStatistics.h"
 #include "drake/multibody/fem/mpm-dev/MPMTransfer.h"
 #include "drake/multibody/fem/mpm-dev/Particles.h"
 #include "drake/multibody/fem/mpm-dev/particles_to_bgeo.h"
@@ -80,7 +82,11 @@ class MPMDriver {
     // output_directory/case_name($step).bgeo
     void WriteParticlesToBgeo(int step);
 
+    // Print the run time statistics to the standard IO
+    void PrintRunTimeStatistics() const;
+
     MPMParameters param_;
+    MPMRunTimeStatistics run_time_statistics_{};
     Particles particles_;
     Grid grid_;
     MPMTransfer mpm_transfer_;

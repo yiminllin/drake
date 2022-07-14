@@ -25,6 +25,11 @@ void MPMDriver::DoTimeStepping() {
     double endtime = param_.solver_param.endtime;
     double dt = param_.solver_param.dt;
     bool is_last_step = false;
+    using Clock = std::chrono::steady_clock;
+    using Duration = std::chrono::duration<double>;
+    std::chrono::time_point<Clock> start_timestepping_time = Clock::now();
+    std::chrono::time_point<Clock> start_io_time;
+
     // Advance time steps until endtime
     for (double t = 0; t < endtime; t += dt) {
         is_last_step = (endtime - t <= dt);
@@ -39,9 +44,20 @@ void MPMDriver::DoTimeStepping() {
         if ((t >= io_step*param_.io_param.write_interval) || (is_last_step)) {
             std::cout << "==== MPM Step " << step << " iostep " << io_step <<
                          ", at t = " << t+dt << std::endl;
+            start_io_time = Clock::now();
             WriteParticlesToBgeo(io_step++);
+            const auto elapsed_time
+                    = std::chrono::duration_cast<Duration>(Clock::now()
+                                                    - start_io_time).count();
+            run_time_statistics_.time_io += elapsed_time;
         }
     }
+
+    const auto total_time = std::chrono::duration_cast<Duration>(Clock::now()
+                                            - start_timestepping_time).count();
+    run_time_statistics_.time_total += total_time;
+
+    PrintRunTimeStatistics();
 }
 
 // TODO(yiminlin.tri): Not tested.
@@ -139,6 +155,43 @@ void MPMDriver::WriteParticlesToBgeo(int io_step) {
                                                     particles_.get_masses());
 }
 
+void MPMDriver::PrintRunTimeStatistics() const {
+    std::cout << "===================" << std::endl;
+    std::cout << "==== Total run                   time: "
+            << run_time_statistics_.time_total
+            << " seconds" << std::endl;
+    std::cout << "==== Total IO                    time: "
+            << run_time_statistics_.time_io
+            << " seconds" << std::endl;
+    std::cout << "==== Total stress/plastic update time: "
+            << run_time_statistics_.time_update_stress_and_plasticity
+            << " seconds" << std::endl;
+    std::cout << "==== Total transfer setup        time: "
+            << run_time_statistics_.time_setup_transfer
+            << " seconds" << std::endl;
+    std::cout << "==== Total P2G                   time: "
+            << run_time_statistics_.time_P2G
+            << " seconds" << std::endl;
+    std::cout << "==== Total update velocity       time: "
+            << run_time_statistics_.time_update_grid_velocity
+            << " seconds" << std::endl;
+    std::cout << "==== Total apply forces          time: "
+            << run_time_statistics_.time_apply_external_forces
+            << " seconds" << std::endl;
+    std::cout << "==== Total collision objs update time: "
+            << run_time_statistics_.time_collision_objects_update
+            << " seconds" << std::endl;
+    std::cout << "==== Total enforce BC            time: "
+            << run_time_statistics_.time_enforce_bc
+            << " seconds" << std::endl;
+    std::cout << "==== Total G2P                   time: "
+            << run_time_statistics_.time_G2P
+            << " seconds" << std::endl;
+    std::cout << "==== Total particles advection   time: "
+            << run_time_statistics_.time_advect_particles
+            << " seconds" << std::endl;
+}
+
 void MPMDriver::checkCFL(double dt) {
     for (const auto& v : particles_.get_velocities()) {
         if (!(std::max({std::abs(dt*v(0)),
@@ -150,30 +203,74 @@ void MPMDriver::checkCFL(double dt) {
 }
 
 void MPMDriver::AdvanceOneTimeStep(double dt) {
+    using Clock = std::chrono::steady_clock;
+    using Duration = std::chrono::duration<double>;
+    std::chrono::time_point<Clock> start_time;
+    Duration::rep elapsed_time;
+
     // Apply plasticity and update Kirchhoff stress on particles
+    start_time = Clock::now();
     particles_.ApplyPlasticityAndUpdateKirchhoffStresses();
+    elapsed_time = std::chrono::duration_cast<Duration>(Clock::now()
+                                                      - start_time).count();
+    run_time_statistics_.time_update_stress_and_plasticity += elapsed_time;
 
     // Set up the transfer routines (Preallocations, sort the particles)
+    start_time = Clock::now();
     mpm_transfer_.SetUpTransfer(grid_, &particles_);
+    elapsed_time = std::chrono::duration_cast<Duration>(Clock::now()
+                                                      - start_time).count();
+    run_time_statistics_.time_setup_transfer += elapsed_time;
 
     // Main Algorithm:
     // P2G
+    start_time = Clock::now();
     mpm_transfer_.TransferParticlesToGrid(particles_, &grid_);
+    elapsed_time = std::chrono::duration_cast<Duration>(Clock::now()
+                                                      - start_time).count();
+    run_time_statistics_.time_P2G += elapsed_time;
 
     // Update grid velocity
+    start_time = Clock::now();
     grid_.UpdateVelocity(dt);
+    elapsed_time = std::chrono::duration_cast<Duration>(Clock::now()
+                                                      - start_time).count();
+    run_time_statistics_.time_update_grid_velocity += elapsed_time;
 
-    // Apply gravitational force and enforce boundary condition
+    // Apply gravitational force
+    start_time = Clock::now();
     gravitational_force_.ApplyGravitationalForces(dt, &grid_);
+    elapsed_time = std::chrono::duration_cast<Duration>(Clock::now()
+                                                      - start_time).count();
+    run_time_statistics_.time_apply_external_forces += elapsed_time;
+
     // Update Collision Objects
+    start_time = Clock::now();
     collision_objects_.AdvanceOneTimeStep(dt);
+    elapsed_time = std::chrono::duration_cast<Duration>(Clock::now()
+                                                      - start_time).count();
+    run_time_statistics_.time_collision_objects_update += elapsed_time;
+
+    // Enforce boundary conditions
+    start_time = Clock::now();
     grid_.EnforceBoundaryCondition(collision_objects_);
+    elapsed_time = std::chrono::duration_cast<Duration>(Clock::now()
+                                                      - start_time).count();
+    run_time_statistics_.time_enforce_bc += elapsed_time;
 
     // G2P
+    start_time = Clock::now();
     mpm_transfer_.TransferGridToParticles(grid_, dt, &particles_);
+    elapsed_time = std::chrono::duration_cast<Duration>(Clock::now()
+                                                      - start_time).count();
+    run_time_statistics_.time_G2P += elapsed_time;
 
     // Advect particles
+    start_time = Clock::now();
     particles_.AdvectParticles(dt);
+    elapsed_time = std::chrono::duration_cast<Duration>(Clock::now()
+                                                      - start_time).count();
+    run_time_statistics_.time_advect_particles += elapsed_time;
 }
 
 }  // namespace mpm
