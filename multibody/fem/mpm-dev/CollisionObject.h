@@ -8,6 +8,7 @@
 #include "drake/math/rigid_transform.h"
 #include "drake/multibody/fem/matrix_utilities.h"
 #include "drake/multibody/fem/mpm-dev/AnalyticLevelSet.h"
+#include "drake/multibody/fem/mpm-dev/SpatialVelocityTimeDependent.h"
 #include "drake/multibody/math/spatial_algebra.h"
 
 namespace drake {
@@ -26,7 +27,7 @@ class CollisionObject {
  public:
     struct CollisionObjectState {
         math::RigidTransform<double> pose;
-        multibody::SpatialVelocity<double> spatial_velocity;
+        std::unique_ptr<SpatialVelocityTimeDependent> spatial_velocity;
     };
 
     CollisionObject(std::unique_ptr<AnalyticLevelSet> level_set,

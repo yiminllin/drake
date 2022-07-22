@@ -7,6 +7,7 @@
 #include "drake/common/eigen_types.h"
 #include "drake/multibody/fem/matrix_utilities.h"
 #include "drake/multibody/fem/mpm-dev/CollisionObject.h"
+#include "drake/multibody/fem/mpm-dev/SpatialVelocityTimeDependent.h"
 
 namespace drake {
 namespace multibody {
@@ -20,7 +21,7 @@ class KinematicCollisionObjects {
     // Add a new collision object with the given intial conditions
     void AddCollisionObject(std::unique_ptr<AnalyticLevelSet> level_set,
                             math::RigidTransform<double> pose,
-                            const multibody::SpatialVelocity<double>&
+                            std::unique_ptr<SpatialVelocityTimeDependent>
                                                             spatial_velocity,
                             double friction_coeff);
 
