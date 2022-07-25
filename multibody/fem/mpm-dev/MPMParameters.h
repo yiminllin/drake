@@ -25,10 +25,8 @@ class MPMParameters {
         // Run the simulation with timestep size dt till endtime
         double endtime;
         double dt;
-        // Grid parameters, as documented in Grid Class
+        // Grid parameters, as documented in SparseGrid Class
         double h;
-        Vector3<int> num_gridpt_1D;
-        Vector3<int> bottom_corner;
     };
 
     // IO parameters. Write the output as output_directory/case_name($i).bgeo

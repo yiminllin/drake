@@ -14,11 +14,11 @@
 #include "drake/multibody/fem/mpm-dev/AnalyticLevelSet.h"
 #include "drake/multibody/fem/mpm-dev/ElastoPlasticModel.h"
 #include "drake/multibody/fem/mpm-dev/GravitationalForce.h"
-#include "drake/multibody/fem/mpm-dev/Grid.h"
 #include "drake/multibody/fem/mpm-dev/MPMParameters.h"
 #include "drake/multibody/fem/mpm-dev/MPMRunTimeStatistics.h"
 #include "drake/multibody/fem/mpm-dev/MPMTransfer.h"
 #include "drake/multibody/fem/mpm-dev/Particles.h"
+#include "drake/multibody/fem/mpm-dev/SparseGrid.h"
 #include "drake/multibody/fem/mpm-dev/particles_to_bgeo.h"
 #include "drake/multibody/fem/mpm-dev/poisson_disk_sampling.h"
 #include "drake/multibody/math/spatial_algebra.h"
@@ -88,7 +88,7 @@ class MPMDriver {
     MPMParameters param_;
     MPMRunTimeStatistics run_time_statistics_{};
     Particles particles_;
-    Grid grid_;
+    SparseGrid grid_;
     MPMTransfer mpm_transfer_;
     GravitationalForce gravitational_force_;
     KinematicCollisionObjects collision_objects_;

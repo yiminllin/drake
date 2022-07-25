@@ -54,6 +54,16 @@ drake_cc_library(
 )
 
 drake_cc_library(
+    name = "Utils",
+    hdrs = [
+        "Utils.h",
+    ],
+    deps = [
+        "//common:essential",
+    ],
+)
+
+drake_cc_library(
     name = "ElastoPlasticModel",
     srcs = [
         "ElastoPlasticModel.cc",
@@ -130,6 +140,23 @@ drake_cc_library(
 )
 
 drake_cc_library(
+    name = "SparseGrid",
+    srcs = [
+        "SparseGrid.cc",
+    ],
+    hdrs = [
+        "SparseGrid.h",
+    ],
+    deps = [
+        ":KinematicCollisionObjects",
+        ":TotalMassAndMomentum",
+        ":Utils",
+        "//common:essential",
+        "//geometry/proximity:posed_half_space",
+    ],
+)
+
+drake_cc_library(
     name = "CollisionObject",
     srcs = [
         "CollisionObject.cc",
@@ -169,7 +196,7 @@ drake_cc_library(
         "GravitationalForce.h",
     ],
     deps = [
-        ":Grid",
+        ":SparseGrid",
         "//common:essential",
     ],
 )
@@ -218,8 +245,8 @@ drake_cc_library(
     ],
     deps = [
         ":BSpline",
-        ":Grid",
         ":Particles",
+        ":SparseGrid",
         "//common:essential",
     ],
 )
@@ -271,11 +298,11 @@ drake_cc_library(
         ":AnalyticLevelSet",
         ":ElastoPlasticModel",
         ":GravitationalForce",
-        ":Grid",
         ":MPMParameters",
         ":MPMRunTimeStatistics",
         ":MPMTransfer",
         ":Particles",
+        ":SparseGrid",
         ":particles_to_bgeo",
         ":poisson_disk_sampling",
         "//common:essential",

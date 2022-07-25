@@ -4,44 +4,45 @@ namespace drake {
 namespace multibody {
 namespace mpm {
 
-void MPMTransfer::SetUpTransfer(const Grid& grid, Particles* particles) {
-    SortParticles(grid, particles);
-    UpdateBasisAndGradientParticles(grid, *particles);
+void MPMTransfer::SetUpTransfer(SparseGrid* grid,
+                                Particles* particles) {
+    InitializeSparseGrid(*particles, grid);
+    SortParticles(*grid, particles);
+    UpdateBasisAndGradientParticles(*grid, *particles);
     // TODO(yiminlin.tri): Dp_inv_ is hardcoded for quadratic B-Spline
     // The values of Dp_inv_ are different for different B-Spline bases
     // https://www.math.ucla.edu/~jteran/papers/JSSTS15.pdf
-    Dp_inv_ = 4.0/(grid.get_h()*grid.get_h());
+    Dp_inv_ = 4.0/(grid->get_h()*grid->get_h());
 }
 
 void MPMTransfer::TransferParticlesToGrid(const Particles& particles,
-                                          Grid* grid) {
-    int p_start, p_end, bi, bj, bk, idx_local;
+                                          SparseGrid* grid) {
+    int p_start, p_end, idx_local;
     double mass_p, ref_volume_p;
     // Local sum of states m_i v_i f_i on the grid points
     std::array<GridState, 27> local_pad;
     // Positions of grid points in the batch
     std::array<Vector3<double>, 27> batch_positions;
+    Vector3<int> batch_index_3d;
 
     // Clear grid states
     grid->ResetStates();
 
     // For each batch of particles
     p_start = 0;
-    for (const auto& [batch_index_flat, batch_index_3d] : grid->get_indices()) {
-        if (batch_sizes_[batch_index_flat] != 0) {
-            p_end = p_start + batch_sizes_[batch_index_flat];
+    for (int i = 0; i < grid->get_num_active_gridpt(); ++i) {
+        if (batch_sizes_[i] != 0) {
+            p_end = p_start + batch_sizes_[i];
 
             // Preallocate positions at grid points in the current batch on a
             // local array
-            bi = batch_index_3d[0];
-            bj = batch_index_3d[1];
-            bk = batch_index_3d[2];
+            batch_index_3d = grid->Expand1DIndex(i);
             for (int a = -1; a <= 1; ++a) {
             for (int b = -1; b <= 1; ++b) {
             for (int c = -1; c <= 1; ++c) {
                 idx_local = (a+1) + 3*(b+1) + 9*(c+1);
                 batch_positions[idx_local] =
-                                        grid->get_position(bi+a, bj+b, bk+c);
+                    grid->get_position(batch_index_3d+Vector3<int>(a, b, c));
             }
             }
             }
@@ -62,6 +63,7 @@ void MPMTransfer::TransferParticlesToGrid(const Particles& particles,
                                             particles.get_velocity(p),
                                             C_p,
                                             particles.get_kirchhoff_stress(p),
+                                    // batch_positions, &local_pads[b]);
                                             batch_positions, &local_pad);
             }
 
@@ -76,7 +78,7 @@ void MPMTransfer::TransferParticlesToGrid(const Particles& particles,
     grid->RescaleVelocities();
 }
 
-void MPMTransfer::TransferGridToParticles(const Grid& grid, double dt,
+void MPMTransfer::TransferGridToParticles(const SparseGrid& grid, double dt,
                                           Particles* particles) {
     DRAKE_ASSERT(dt > 0.0);
     int bi, bj, bk, idx_local;
@@ -84,11 +86,12 @@ void MPMTransfer::TransferGridToParticles(const Grid& grid, double dt,
     // A local array holding positions and velocities x^{n+1}_i, v^{n+1}_i at a
     // batch
     std::array<BatchState, 27> batch_states;
+    Vector3<int> batch_index_3d;
 
     // For each batch of particles
     p_start = 0;
-    for (const auto& [batch_index_flat, batch_index_3d] : grid.get_indices()) {
-        int batch_size = batch_sizes_[batch_index_flat];
+    for (int i = 0; i < grid.get_num_active_gridpt(); ++i) {
+        int batch_size = batch_sizes_[i];
         // Skip empty batches
         if (batch_size == 0) {
             continue;
@@ -97,6 +100,7 @@ void MPMTransfer::TransferGridToParticles(const Grid& grid, double dt,
         p_end = p_start + batch_size;
         // Preallocate positions and velocities at grid points in the current
         // batch on a local array
+        batch_index_3d = grid.Expand1DIndex(i);
         bi = batch_index_3d[0];
         bj = batch_index_3d[1];
         bk = batch_index_3d[2];
@@ -104,10 +108,9 @@ void MPMTransfer::TransferGridToParticles(const Grid& grid, double dt,
         for (int b = -1; b <= 1; ++b) {
         for (int c = -1; c <= 1; ++c) {
             idx_local = (a+1) + 3*(b+1) + 9*(c+1);
-            batch_states[idx_local].position =
-                                            grid.get_position(bi+a, bj+b, bk+c);
-            batch_states[idx_local].velocity =
-                                            grid.get_velocity(bi+a, bj+b, bk+c);
+            Vector3<int> index_3d = Vector3<int>(bi+a, bj+b, bk+c);
+            batch_states[idx_local].position = grid.get_position(index_3d);
+            batch_states[idx_local].velocity = grid.get_velocity(index_3d);
         }
         }
         }
@@ -122,41 +125,73 @@ void MPMTransfer::TransferGridToParticles(const Grid& grid, double dt,
     }
 }
 
-// TODO(yiminlin.tri): We assume particles all lies in the grid
-// Also may be a good idea to remove this routine's dependency on the grid,
-// this need future refactoring
-void MPMTransfer::SortParticles(const Grid& grid, Particles* particles) {
+void MPMTransfer::InitializeSparseGrid(const Particles& particles,
+                                       SparseGrid* grid) {
+    Vector3<int> batch_idx_3D;
+    int num_particles = particles.get_num_particles();
+    // TODO(yiminlin.tri): hardcoded 27
+    std::vector<Vector3<int>> active_gridpts(27*num_particles);
+
+    // Determine the set of active grids points by iterating through all
+    // particles
+    for (int p = 0; p < num_particles; ++p) {
+        batch_idx_3D = CalcBatchIndex(particles.get_position(p), grid->get_h());
+        for (int a = -1; a <= 1; ++a) {
+        for (int b = -1; b <= 1; ++b) {
+        for (int c = -1; c <= 1; ++c) {
+            active_gridpts[27*p+((a+1)+3*(b+1)+9*(c+1))] =
+                                        Vector3<int>(batch_idx_3D(0)+c,
+                                                    batch_idx_3D(1)+b,
+                                                    batch_idx_3D(2)+a);
+        }
+        }
+        }
+    }
+
+    std::sort(active_gridpts.begin(), active_gridpts.end(),
+              [](Vector3<int> pt0, Vector3<int> pt1) {
+                return ((pt0(2) < pt1(2)) ||
+                        ((pt0(2) == pt1(2)) && (pt0(1) < pt1(1))) ||
+                        ((pt0(2) == pt1(2)) && (pt0(1) == pt1(1))
+                      && (pt0(0) < pt1(0))));
+              });
+
+    active_gridpts.erase(unique(active_gridpts.begin(),
+                                       active_gridpts.end()),
+                                       active_gridpts.end());
+
+    // TODO(yiminlin.tri): Magic number
+    grid->reserve(2*active_gridpts.size());
+    grid->UpdateActiveGridPoints(std::move(active_gridpts));
+}
+
+void MPMTransfer::SortParticles(const SparseGrid& grid, Particles* particles) {
     Vector3<int> batch_idx_3D;
     int num_particles = particles->get_num_particles();
     // A temporary array storing the particle index permutation after sorting
     std::vector<size_t> sorted_indices(num_particles);
     // A temporary array storing the batch index correspond to each particle
     std::vector<int> batch_indices(num_particles);
-    // Initialize batch_size to be 0 for every batch
-    batch_sizes_.resize(grid.get_num_gridpt());
-    fill(batch_sizes_.begin(), batch_sizes_.end(), 0);
 
-    // Preallocate the indices of batches, and check particles out of bounds
-    // error
+    // Preallocate the indices of batches
+    // TODO(yiminlin.tri): duplicate calculation with InitializeSparseGrid
     for (int p = 0; p < num_particles; ++p) {
         batch_idx_3D = CalcBatchIndex(particles->get_position(p), grid.get_h());
-        batch_indices[p] = grid.Reduce3DIndex(batch_idx_3D(0), batch_idx_3D(1),
-                                              batch_idx_3D(2));
-        for (int a = -1; a <= 1; ++a) {
-        for (int b = -1; b <= 1; ++b) {
-        for (int c = -1; c <= 1; ++c) {
-        if (!grid.in_index_range(batch_idx_3D[0]+a, batch_idx_3D[1]+b,
-                                 batch_idx_3D[2]+c)) {
-            throw std::logic_error("Particles out of bound");
-        }
-        }
-        }
-        }
+        batch_indices[p] = grid.Reduce3DIndex(batch_idx_3D);
     }
 
+    // Initialize batch_size to be 0 for every batch
+    batch_sizes_.resize(grid.get_num_active_gridpt());
+    fill(batch_sizes_.begin(), batch_sizes_.end(), 0);
     // Accumulate batch sizes
     for (int p = 0; p < num_particles; ++p) {
         ++batch_sizes_[batch_indices[p]];
+    }
+
+    // Calculate the number of batches
+    num_batches_ = 0;
+    for (int i = 0; i < grid.get_num_active_gridpt(); ++i) {
+        if (batch_sizes_[i] > 0) {  num_batches_++;  }
     }
 
     std::iota(sorted_indices.begin(), sorted_indices.end(), 0);
@@ -168,9 +203,10 @@ void MPMTransfer::SortParticles(const Grid& grid, Particles* particles) {
     particles->Reorder(sorted_indices);
 }
 
-void MPMTransfer::UpdateBasisAndGradientParticles(const Grid& grid,
+void MPMTransfer::UpdateBasisAndGradientParticles(const SparseGrid& grid,
                                                   const Particles& particles) {
     int num_particles, p_start, p_end;
+    Vector3<int> batch_index_3d;
     num_particles = particles.get_num_particles();
 
     bases_val_particles_.reserve(num_particles);
@@ -178,14 +214,18 @@ void MPMTransfer::UpdateBasisAndGradientParticles(const Grid& grid,
 
     // For each batch of particles
     p_start = 0;
-    for (const auto& [batch_index_flat, batch_index_3d] : grid.get_indices()) {
-        int batch_size = batch_sizes_[batch_index_flat];
+    // For all active grid points
+    for (int i = 0; i < grid.get_num_active_gridpt(); ++i) {
+        // Number of particles in the batch centered at the current active grid
+        // point.
+        int batch_size = batch_sizes_[i];
         // Skip empty batches
         if (batch_size == 0) {
             continue;
         }
 
         p_end = p_start + batch_size;
+        batch_index_3d = grid.Expand1DIndex(i);
         // For each particle in the batch (Assume particles are sorted with
         // respect to the batch index), update basis evaluations
         for (int p = p_start; p < p_end; ++p) {
@@ -197,7 +237,7 @@ void MPMTransfer::UpdateBasisAndGradientParticles(const Grid& grid,
 }
 
 void MPMTransfer::EvalBasisOnBatch(int p, const Vector3<double>& xp,
-                                   const Grid& grid,
+                                   const SparseGrid& grid,
                                    const Vector3<int>& batch_index_3d) {
     int bi = batch_index_3d[0];
     int bj = batch_index_3d[1];
@@ -205,6 +245,8 @@ void MPMTransfer::EvalBasisOnBatch(int p, const Vector3<double>& xp,
     int idx_local;
     Vector3<int> grid_index;
 
+    // TODO(yiminlin.tri): Could be nicer to refactor this a, b, c loop, with
+    //                     Vector<int>
     for (int a = -1; a <= 1; ++a) {
     for (int b = -1; b <= 1; ++b) {
     for (int c = -1; c <= 1; ++c) {
@@ -214,9 +256,8 @@ void MPMTransfer::EvalBasisOnBatch(int p, const Vector3<double>& xp,
         idx_local = (a+1) + 3*(b+1) + 9*(c+1);
         // For each particle in the batch (Assume particles are sorted with
         // respect to the batch index), update basis evaluations
-        BSpline basis = BSpline(grid.get_h(), grid.get_position(grid_index(0),
-                                                                grid_index(1),
-                                                                grid_index(2)));
+        // TODO(yiminlin.tri): Maybe a good idea to preallocate?
+        BSpline basis = BSpline(grid.get_h(), grid.get_position(grid_index));
         std::tie(bases_val_particles_[p][idx_local],
                 bases_grad_particles_[p][idx_local]) =
         basis.EvalBasisAndGradient(xp);
@@ -266,7 +307,7 @@ void MPMTransfer::AccumulateGridStatesOnBatch(int p, double m_p,
 
 void MPMTransfer::WriteBatchStateToGrid(const Vector3<int>& batch_index_3d,
                                 const std::array<GridState, 27>& local_pad,
-                                Grid* grid) {
+                                SparseGrid* grid) {
     int bi = batch_index_3d[0];
     int bj = batch_index_3d[1];
     int bk = batch_index_3d[2];

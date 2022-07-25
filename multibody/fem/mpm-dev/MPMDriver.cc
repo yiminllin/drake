@@ -6,9 +6,7 @@ namespace mpm {
 
 MPMDriver::MPMDriver(MPMParameters param):
                                 param_(std::move(param)),
-                                grid_(param.solver_param.num_gridpt_1D,
-                                      param.solver_param.h,
-                                      param.solver_param.bottom_corner),
+                                grid_(param.solver_param.h),
                                 gravitational_force_(param.physical_param.g) {
     DRAKE_DEMAND(param.solver_param.endtime >= 0.0);
     DRAKE_DEMAND(param.solver_param.dt > 0.0);
@@ -217,7 +215,7 @@ void MPMDriver::AdvanceOneTimeStep(double dt) {
 
     // Set up the transfer routines (Preallocations, sort the particles)
     start_time = Clock::now();
-    mpm_transfer_.SetUpTransfer(grid_, &particles_);
+    mpm_transfer_.SetUpTransfer(&grid_, &particles_);
     elapsed_time = std::chrono::duration_cast<Duration>(Clock::now()
                                                       - start_time).count();
     run_time_statistics_.time_setup_transfer += elapsed_time;

@@ -3,7 +3,7 @@
 #include <gtest/gtest.h>
 
 #include "drake/common/test_utilities/eigen_matrix_compare.h"
-#include "drake/multibody/fem/mpm-dev/Grid.h"
+#include "drake/multibody/fem/mpm-dev/SparseGrid.h"
 
 namespace drake {
 namespace multibody {

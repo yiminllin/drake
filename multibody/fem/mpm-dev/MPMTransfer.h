@@ -5,12 +5,13 @@
 #include <memory>
 #include <numeric>
 #include <tuple>
+#include <utility>
 #include <vector>
 
 #include "drake/common/eigen_types.h"
 #include "drake/multibody/fem/mpm-dev/BSpline.h"
-#include "drake/multibody/fem/mpm-dev/Grid.h"
 #include "drake/multibody/fem/mpm-dev/Particles.h"
+#include "drake/multibody/fem/mpm-dev/SparseGrid.h"
 
 namespace drake {
 namespace multibody {
@@ -26,15 +27,15 @@ class MPMTransfer {
     // bases' evaluations for transfer routines. This routine has to be called
     // at the beginning of each time step (before P2G and G2P transfers),
     // otherwise the results will be incorrect.
-    void SetUpTransfer(const Grid& grid, Particles* particles);
+    void SetUpTransfer(SparseGrid* grid, Particles* particles);
 
     // Transfer masses, velocities, and Kirchhoff stresses on the particles
     // to masses, velocities, and forces on the grid
-    void TransferParticlesToGrid(const Particles& particles, Grid* grid);
+    void TransferParticlesToGrid(const Particles& particles, SparseGrid* grid);
 
     // Transfer velocities on the grids to velocities and deformation
     // gradients on the particles
-    void TransferGridToParticles(const Grid& grid, double dt,
+    void TransferGridToParticles(const SparseGrid& grid, double dt,
                                  Particles* particles);
 
  private:
@@ -62,6 +63,8 @@ class MPMTransfer {
         Vector3<double> position;
         Vector3<double> velocity;
     };
+
+    void InitializeSparseGrid(const Particles& particles, SparseGrid* grid);
 
     // Sort the particles according to the batch number, in increasing order.
     // As below shown, o denotes the grid points, $ denotes the batch centered
@@ -93,21 +96,18 @@ class MPMTransfer {
     // o = = = o = = = o = = = o = = = o
     // The batches are ordered in a lexiographical ordering, similar to grid
     // points.
-    // SortParticles assume particles are within the bound. We define a particle
-    // is not in bound if the particle does not lie within the grid, or the
-    // particle's position is in the boundary batches. For example, in above
-    // case, the batches that correspond to boundary grid points are boundary
-    // batches.
-    void SortParticles(const Grid& grid, Particles* particles);
+    // SortParticles also initialize the sparse grid with active grid points
+    void SortParticles(const SparseGrid& grid, Particles* particles);
 
     // Update the evalutions and gradients of BSpline bases on each particle,
     // and update bases_val_particles_ and bases_grad_particles_
-    void UpdateBasisAndGradientParticles(const Grid& grid,
+    void UpdateBasisAndGradientParticles(const SparseGrid& grid,
                                          const Particles& particles);
 
     // Evaluate (27) bases neighboring to the given batch, at the p-th particle
     // with position xp, and put the results into preallocated vectors
-    void EvalBasisOnBatch(int p, const Vector3<double>& xp, const Grid& grid,
+    void EvalBasisOnBatch(int p, const Vector3<double>& xp,
+                          const SparseGrid& grid,
                           const Vector3<int>& batch_index_3d);
 
     // At a particular particle p in batch with batch_index_3d, transfer
@@ -133,7 +133,7 @@ class MPMTransfer {
 
     void WriteBatchStateToGrid(const Vector3<int>& batch_index_3d,
                                const std::array<GridState, 27>& sum_local,
-                               Grid* grid);
+                               SparseGrid* grid);
 
     // Update particle states F_p^{n+1} and v_p^{n+1}
     void UpdateParticleStates(const std::array<BatchState, 27>& batch_states,
@@ -155,6 +155,7 @@ class MPMTransfer {
     std::vector<std::array<Vector3<double>, 27>> bases_grad_particles_{};
     // A vector holding the number of particles inside each batch
     std::vector<int> batch_sizes_{};
+    int num_batches_;
 };  // class MPMTransfer
 
 }  // namespace mpm

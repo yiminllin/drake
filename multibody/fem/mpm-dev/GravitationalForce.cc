@@ -10,16 +10,13 @@ GravitationalForce::GravitationalForce():
 GravitationalForce::GravitationalForce(Vector3<double> g):
                                 gravitational_acceleration_(std::move(g)) {}
 
-void GravitationalForce::ApplyGravitationalForces(double dt, Grid* grid) const {
+void GravitationalForce::ApplyGravitationalForces(double dt, SparseGrid* grid)
+                                                                        const {
+    Vector3<double> dv = dt*gravitational_acceleration_;
     // Gravitational acceleration
-    for (const auto& [batch_index_flat, batch_index_3d] : grid->get_indices()) {
-        // Skip grid points with zero mass
-        if (grid->get_mass(batch_index_flat) != 0.0) {
-            const Vector3<double>& velocity_i
-                                        = grid->get_velocity(batch_index_flat);
-            grid->set_velocity(batch_index_flat,
-                            velocity_i + dt*gravitational_acceleration_);
-        }
+    for (int i = 0; i < grid->get_num_active_gridpt(); ++i) {
+        const Vector3<double>& velocity_i = grid->get_velocity(i);
+        grid->set_velocity(i, velocity_i + dv);
     }
 }
 

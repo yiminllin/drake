@@ -29,11 +29,10 @@ int DoMain() {
 
     MPMParameters::SolverParameters s_param {
         2e-0,                                  // End time
-        5e-4,                                  // Time step size
-        0.1,                                   // Grid size
-        Vector3<int>(30, 30, 30),              // Number of grid points in each
-                                               // direction
-        Vector3<int>(-5, -5, -5),              // Bottom corner of the grid
+        // 5e-4,                                  // Time step size
+        // 0.025,                                   // Grid size
+        4e-4,                                  // Time step size
+        0.02,                                   // Grid size
     };
 
     MPMParameters::IOParameters io_param {
@@ -68,12 +67,12 @@ int DoMain() {
     cylinder_velocity.rotational() = Vector3<double>(0.0, -2.5, 0.0);
     double cylinder_mu = 0.4;
     double cylinder_height = 2;
-    double cylinder_radius = 0.4;
+    double cylinder_radius = 0.025;
     std::unique_ptr<AnalyticLevelSet> cylinder_level_set =
                             std::make_unique<CylinderLevelSet>(cylinder_height,
                                                                cylinder_radius);
     math::RollPitchYaw cylinder_rpw = {M_PI/2.0, 0.0, 0.0};
-    Vector3<double> cylinder_translation = {2.5, 1.0, 0.5};
+    Vector3<double> cylinder_translation = {0.8, 0.1, 0.06};
     math::RigidTransform<double> cylinder_pose =
             math::RigidTransform<double>(cylinder_rpw, cylinder_translation);
     objects.AddCollisionObject(std::move(cylinder_level_set),
@@ -81,9 +80,9 @@ int DoMain() {
                                cylinder_velocity, cylinder_mu);
 
     // Initialize a sphere
-    double radius = 0.2;
+    double radius = 0.04;
     SphereLevelSet level_set_sphere = SphereLevelSet(radius);
-    Vector3<double> translation_sphere = {1.8, 1.0, 0.5};
+    Vector3<double> translation_sphere = {0.4, 0.1, 0.05};
     math::RigidTransform<double> pose_sphere =
                             math::RigidTransform<double>(translation_sphere);
     multibody::SpatialVelocity<double> velocity_sphere;
@@ -92,7 +91,7 @@ int DoMain() {
 
     double E = 8e4;
     double nu = 0.49;
-    double yield_stress = 0.1*E;
+    double yield_stress = 0.01*E;
     std::unique_ptr<StvkHenckyWithVonMisesModel> elastoplastic_model
             = std::make_unique<StvkHenckyWithVonMisesModel>(E, nu,
                                                             yield_stress);
