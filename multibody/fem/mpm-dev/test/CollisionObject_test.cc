@@ -9,6 +9,7 @@
 #include "drake/math/roll_pitch_yaw.h"
 #include "drake/math/rotation_matrix.h"
 #include "drake/multibody/fem/mpm-dev/AnalyticLevelSet.h"
+#include "drake/multibody/fem/mpm-dev/SpatialVelocityTimeDependent.h"
 
 namespace drake {
 namespace multibody {
@@ -28,11 +29,13 @@ class CollisionObjectTest : public ::testing::Test {
                         = math::RigidTransform<double>(half_space_translation);
         multibody::SpatialVelocity<double> half_space_v;
         half_space_v.SetZero();
+        std::unique_ptr<SpatialVelocityTimeDependent> half_space_v_ptr
+                = std::make_unique<SpatialVelocityTimeDependent>(half_space_v);
         std::unique_ptr<HalfSpaceLevelSet> half_space_level_set =
                         std::make_unique<HalfSpaceLevelSet>(half_space_normal);
         CollisionObject::CollisionObjectState half_space_state =
-                                                            {half_space_pose,
-                                                             half_space_v};
+                                                {half_space_pose,
+                                                 std::move(half_space_v_ptr)};
         half_space_ = std::make_unique<CollisionObject>(
                                             std::move(half_space_level_set),
                                             std::move(half_space_state),
@@ -48,9 +51,13 @@ class CollisionObjectTest : public ::testing::Test {
         multibody::SpatialVelocity<double> box_v;
         box_v.translational() = Vector3<double>{1.0, 0.0, 0.0};
         box_v.rotational() = Vector3<double>::Zero();
+        std::unique_ptr<SpatialVelocityTimeDependent> box_v_ptr
+                    = std::make_unique<SpatialVelocityTimeDependent>(box_v);
         std::unique_ptr<BoxLevelSet> box_level_set =
                                 std::make_unique<BoxLevelSet>(box_xscale);
-        CollisionObject::CollisionObjectState box_state = {box_pose, box_v};
+        CollisionObject::CollisionObjectState box_state =
+                                                       {box_pose,
+                                                        std::move(box_v_ptr)};
         box_ = std::make_unique<CollisionObject>(std::move(box_level_set),
                                                  std::move(box_state), box_mu);
 
@@ -64,10 +71,13 @@ class CollisionObjectTest : public ::testing::Test {
         multibody::SpatialVelocity<double> sphere_v;
         sphere_v.translational() = Vector3<double>::Zero();
         sphere_v.rotational() = Vector3<double>{M_PI, 0.0, 0.0};
+        std::unique_ptr<SpatialVelocityTimeDependent> sphere_v_ptr
+                    = std::make_unique<SpatialVelocityTimeDependent>(sphere_v);
         std::unique_ptr<SphereLevelSet> sphere_level_set =
                             std::make_unique<SphereLevelSet>(sphere_radius);
         CollisionObject::CollisionObjectState sphere_state =
-                                                    {sphere_pose, sphere_v};
+                                                    {sphere_pose,
+                                                     std::move(sphere_v_ptr)};
         sphere_ = std::make_unique<CollisionObject>(std::move(sphere_level_set),
                                                     std::move(sphere_state),
                                                     sphere_mu);
@@ -83,10 +93,13 @@ class CollisionObjectTest : public ::testing::Test {
         multibody::SpatialVelocity<double> moving_sphere_v;
         moving_sphere_v.translational() = Vector3<double>{1.0, 0.0, 0.0};
         moving_sphere_v.rotational() = Vector3<double>{M_PI, 0.0, 0.0};
+        std::unique_ptr<SpatialVelocityTimeDependent> moving_sphere_v_ptr
+            = std::make_unique<SpatialVelocityTimeDependent>(moving_sphere_v);
         std::unique_ptr<SphereLevelSet> moving_sphere_level_set =
                         std::make_unique<SphereLevelSet>(moving_sphere_radius);
         CollisionObject::CollisionObjectState moving_sphere_state =
-                                        {moving_sphere_pose, moving_sphere_v};
+                                        {moving_sphere_pose,
+                                         std::move(moving_sphere_v_ptr)};
         moving_sphere_ = std::make_unique<CollisionObject>(
                                         std::move(moving_sphere_level_set),
                                         std::move(moving_sphere_state),
@@ -106,12 +119,14 @@ class CollisionObjectTest : public ::testing::Test {
         multibody::SpatialVelocity<double> moving_cylinder_v;
         moving_cylinder_v.translational() = Vector3<double>{1.0, 0.0, 0.0};
         moving_cylinder_v.rotational() = Vector3<double>::Zero();
+        std::unique_ptr<SpatialVelocityTimeDependent> moving_cylinder_v_ptr
+            = std::make_unique<SpatialVelocityTimeDependent>(moving_cylinder_v);
         std::unique_ptr<CylinderLevelSet> moving_cylinder_level_set
                     = std::make_unique<CylinderLevelSet>(moving_cylinder_h,
                                                          moving_cylinder_r);
         CollisionObject::CollisionObjectState cylinder_state =
-                                                        {moving_cylinder_pose,
-                                                         moving_cylinder_v};
+                                            {moving_cylinder_pose,
+                                             std::move(moving_cylinder_v_ptr)};
         moving_cylinder_ = std::make_unique<CollisionObject>(
                                         std::move(moving_cylinder_level_set),
                                         std::move(cylinder_state),

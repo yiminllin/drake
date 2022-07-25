@@ -11,11 +11,14 @@ CollisionObject::CollisionObject(std::unique_ptr<AnalyticLevelSet> level_set,
                                             friction_coeff_(friction_coeff) {}
 
 void CollisionObject::AdvanceOneTimeStep(double dt) {
+    // Update spatial velocity
+    state_.spatial_velocity->AdvanceOneTimeStep(dt);
     // Updated translation velocity
     Vector3<double> translation_new = state_.pose.translation()
-                                  +dt*state_.spatial_velocity.translational();
+            +dt*state_.spatial_velocity->GetSpatialVelocity().translational();
     // Angular velocity
-    const Vector3<double>& omega = state_.spatial_velocity.rotational();
+    const Vector3<double>& omega =
+                    state_.spatial_velocity->GetSpatialVelocity().rotational();
     Matrix3<double> angular_velocity_matrix, R_new, S;
     angular_velocity_matrix <<       0.0, -omega(2),  omega(1),
                                 omega(2),       0.0, -omega(0),
@@ -45,7 +48,8 @@ void CollisionObject::ApplyBoundaryCondition(
 
     // The pose and spatial velocity of the collision object in world frame.
     const math::RigidTransform<double>& X_WR = state_.pose;
-    const multibody::SpatialVelocity<double>& V_WR = state_.spatial_velocity;
+    const multibody::SpatialVelocity<double>& V_WR = state_.spatial_velocity
+                                                        ->GetSpatialVelocity();
 
     // Rotation matrix from world to the collision object
     const math::RotationMatrix<double> Rot_RW = X_WR.rotation().inverse();

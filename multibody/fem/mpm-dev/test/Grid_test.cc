@@ -11,6 +11,7 @@
 #include "drake/math/rigid_transform.h"
 #include "drake/math/roll_pitch_yaw.h"
 #include "drake/multibody/fem/mpm-dev/AnalyticLevelSet.h"
+#include "drake/multibody/fem/mpm-dev/SpatialVelocityTimeDependent.h"
 
 namespace drake {
 namespace multibody {
@@ -358,6 +359,8 @@ GTEST_TEST(GridClassTest, TestWallBoundaryConditionWithHalfSpace) {
     // Initialize the "wall" by halfspaces with suitable normals
     multibody::SpatialVelocity<double> zero_velocity;
     zero_velocity.SetZero();
+    std::unique_ptr<SpatialVelocityTimeDependent> zero_velocity_ptr
+            = std::make_unique<SpatialVelocityTimeDependent>(zero_velocity);
     Vector3<double> right_wall_n  = {-1.0,  0.0,  0.0};
     Vector3<double> left_wall_n   = { 1.0,  0.0,  0.0};
     Vector3<double> front_wall_n  = { 0.0,  1.0,  0.0};
@@ -396,17 +399,23 @@ GTEST_TEST(GridClassTest, TestWallBoundaryConditionWithHalfSpace) {
                         math::RigidTransform<double>(bottom_wall_translation);
 
     objects.AddCollisionObject(std::move(right_wall_level_set),
-                               std::move(right_wall_pose), zero_velocity, mu);
+                               std::move(right_wall_pose),
+                               std::move(zero_velocity_ptr->Clone()), mu);
     objects.AddCollisionObject(std::move(left_wall_level_set),
-                               std::move(left_wall_pose), zero_velocity, mu);
+                               std::move(left_wall_pose),
+                               std::move(zero_velocity_ptr->Clone()), mu);
     objects.AddCollisionObject(std::move(front_wall_level_set),
-                               std::move(front_wall_pose), zero_velocity, mu);
+                               std::move(front_wall_pose),
+                               std::move(zero_velocity_ptr->Clone()), mu);
     objects.AddCollisionObject(std::move(back_wall_level_set),
-                               std::move(back_wall_pose), zero_velocity, mu);
+                               std::move(back_wall_pose),
+                               std::move(zero_velocity_ptr->Clone()), mu);
     objects.AddCollisionObject(std::move(top_wall_level_set),
-                               std::move(top_wall_pose), zero_velocity, mu);
+                               std::move(top_wall_pose),
+                               std::move(zero_velocity_ptr->Clone()), mu);
     objects.AddCollisionObject(std::move(bottom_wall_level_set),
-                               std::move(bottom_wall_pose), zero_velocity, mu);
+                               std::move(bottom_wall_pose),
+                               std::move(zero_velocity_ptr->Clone()), mu);
 
     // Populate the grid with nonzero velocities, nonzero mass
     double dummy_mass = 1.0;
@@ -482,6 +491,8 @@ GTEST_TEST(GridClassTest, TestWallBoundaryConditionWithBox) {
     // Initialize the "wall" by boxes with suitable sizes
     multibody::SpatialVelocity<double> zero_velocity;
     zero_velocity.SetZero();
+    std::unique_ptr<SpatialVelocityTimeDependent> zero_velocity_ptr
+            = std::make_unique<SpatialVelocityTimeDependent>(zero_velocity);
     Vector3<double> right_wall_scale  = {1.0, 10.0, 15.0};
     Vector3<double> left_wall_scale   = {1.0, 10.0, 15.0};
     Vector3<double> front_wall_scale  = {5.0,  1.0, 15.0};
@@ -520,17 +531,23 @@ GTEST_TEST(GridClassTest, TestWallBoundaryConditionWithBox) {
                         math::RigidTransform<double>(bottom_wall_translation);
 
     objects.AddCollisionObject(std::move(right_wall_level_set),
-                               std::move(right_wall_pose), zero_velocity, mu);
+                               std::move(right_wall_pose),
+                               std::move(zero_velocity_ptr->Clone()), mu);
     objects.AddCollisionObject(std::move(left_wall_level_set),
-                               std::move(left_wall_pose), zero_velocity, mu);
+                               std::move(left_wall_pose),
+                               std::move(zero_velocity_ptr->Clone()), mu);
     objects.AddCollisionObject(std::move(front_wall_level_set),
-                               std::move(front_wall_pose), zero_velocity, mu);
+                               std::move(front_wall_pose),
+                               std::move(zero_velocity_ptr->Clone()), mu);
     objects.AddCollisionObject(std::move(back_wall_level_set),
-                               std::move(back_wall_pose), zero_velocity, mu);
+                               std::move(back_wall_pose),
+                               std::move(zero_velocity_ptr->Clone()), mu);
     objects.AddCollisionObject(std::move(top_wall_level_set),
-                               std::move(top_wall_pose), zero_velocity, mu);
+                               std::move(top_wall_pose),
+                               std::move(zero_velocity_ptr->Clone()), mu);
     objects.AddCollisionObject(std::move(bottom_wall_level_set),
-                               std::move(bottom_wall_pose), zero_velocity, mu);
+                               std::move(bottom_wall_pose),
+                               std::move(zero_velocity_ptr->Clone()), mu);
 
     // Populate the grid with nonzero velocities
     double dummy_mass = 1.0;
@@ -611,6 +628,8 @@ GTEST_TEST(GridClassTest, TestRotatedPlaneBC) {
 
     multibody::SpatialVelocity<double> zero_velocity;
     zero_velocity.SetZero();
+    std::unique_ptr<SpatialVelocityTimeDependent> zero_velocity_ptr
+            = std::make_unique<SpatialVelocityTimeDependent>(zero_velocity);
     Vector3<double> wall_normal = {1.0, 1.0, 1.0};
     std::unique_ptr<AnalyticLevelSet> wall_level_set =
                             std::make_unique<HalfSpaceLevelSet>(wall_normal);
@@ -618,7 +637,7 @@ GTEST_TEST(GridClassTest, TestRotatedPlaneBC) {
     math::RigidTransform<double> wall_pose =
                         math::RigidTransform<double>(wall_translation);
     objects.AddCollisionObject(std::move(wall_level_set), std::move(wall_pose),
-                               zero_velocity, mu);
+                               std::move(zero_velocity_ptr), mu);
 
     // Populate the grid with nonzero velocities
     double dummy_mass = 1.0;
@@ -680,6 +699,8 @@ GTEST_TEST(GridClassTest, TestMovingCylindricalBC) {
     multibody::SpatialVelocity<double> cylinder_velocity;
     cylinder_velocity.translational() = Vector3<double>(1.0, 1.0, 1.0);
     cylinder_velocity.rotational() = Vector3<double>::Zero();
+    std::unique_ptr<SpatialVelocityTimeDependent> cylinder_velocity_ptr
+            = std::make_unique<SpatialVelocityTimeDependent>(cylinder_velocity);
     double cylinder_height = 1.0;
     double cylinder_radius = 0.5;
     double cylinder_mu     = 0.1;
@@ -692,7 +713,7 @@ GTEST_TEST(GridClassTest, TestMovingCylindricalBC) {
                                                   cylinder_translation};
     objects.AddCollisionObject(std::move(cylinder_level_set),
                                std::move(cylinder_pose),
-                               cylinder_velocity, cylinder_mu);
+                               std::move(cylinder_velocity_ptr), cylinder_mu);
 
     // Populate the grid with nonzero velocities
     double dummy_mass = 1.0;

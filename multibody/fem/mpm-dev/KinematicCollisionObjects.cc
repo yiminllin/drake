@@ -7,10 +7,11 @@ namespace mpm {
 void KinematicCollisionObjects::AddCollisionObject(
                     std::unique_ptr<AnalyticLevelSet> level_set,
                     math::RigidTransform<double> pose,
-                    const multibody::SpatialVelocity<double>& spatial_velocity,
+                    std::unique_ptr<SpatialVelocityTimeDependent>
+                                                      spatial_velocity,
                     double friction_coeff) {
     CollisionObject::CollisionObjectState state = {std::move(pose),
-                                                   spatial_velocity};
+                                                   std::move(spatial_velocity)};
     collision_objects_.emplace_back(
                         std::make_unique<CollisionObject>(std::move(level_set),
                                                           std::move(state),

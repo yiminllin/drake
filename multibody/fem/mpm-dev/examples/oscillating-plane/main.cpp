@@ -16,12 +16,22 @@
 #include "drake/multibody/fem/mpm-dev/CorotatedElasticModel.h"
 #include "drake/multibody/fem/mpm-dev/MPMDriver.h"
 #include "drake/multibody/fem/mpm-dev/SpatialVelocityTimeDependent.h"
-#include "drake/multibody/fem/mpm-dev/StvkHenckyWithVonMisesModel.h"
 #include "drake/multibody/math/spatial_velocity.h"
 
 namespace drake {
 namespace multibody {
 namespace mpm {
+
+multibody::SpatialVelocity<double> oscillating_velocity(double t) {
+    multibody::SpatialVelocity<double> wall_velocity;
+    wall_velocity.rotational() = Vector3<double>(0.0, 0.0, 0.0);
+    if (t <= 1.0) {
+        wall_velocity.translational() = Vector3<double>(0.0, 0.0, 1.0);
+    } else {
+        wall_velocity.translational() = Vector3<double>(0.0, 0.0, -1.0);
+    }
+    return wall_velocity;
+}
 
 int DoMain() {
     MPMParameters::PhysicalParameters p_param {
@@ -30,10 +40,11 @@ int DoMain() {
 
     MPMParameters::SolverParameters s_param {
         2e-0,                                  // End time
-        // 5e-4,                                  // Time step size
-        // 0.025,                                   // Grid size
-        4e-4,                                  // Time step size
-        0.02,                                   // Grid size
+        5e-4,                                  // Time step size
+        0.1,                                   // Grid size
+        Vector3<int>(20, 20, 40),              // Number of grid points in each
+                                               // direction
+        Vector3<int>(0, 0, 0),              // Bottom corner of the grid
     };
 
     MPMParameters::IOParameters io_param {
@@ -48,46 +59,22 @@ int DoMain() {
     KinematicCollisionObjects objects = KinematicCollisionObjects();
 
     // Initialize the wall
-    multibody::SpatialVelocity<double> wall_velocity;
-    wall_velocity.SetZero();
     std::unique_ptr<SpatialVelocityTimeDependent> wall_velocity_ptr =
-                std::make_unique<SpatialVelocityTimeDependent>(wall_velocity);
+        std::make_unique<SpatialVelocityTimeDependent>(oscillating_velocity);
     double wall_mu = 0.5;
     Vector3<double> wall_normal = {0.0, 0.0, 1.0};
     std::unique_ptr<AnalyticLevelSet> wall_level_set =
                             std::make_unique<HalfSpaceLevelSet>(wall_normal);
-    Vector3<double> wall_translation = {0.0, 0.0, 0.0};
+    Vector3<double> wall_translation = {0.0, 0.0, 1.0};
     math::RigidTransform<double> wall_pose =
                             math::RigidTransform<double>(wall_translation);
     objects.AddCollisionObject(std::move(wall_level_set), std::move(wall_pose),
                                std::move(wall_velocity_ptr), wall_mu);
 
-    // Initialize the cylinder
-    multibody::SpatialVelocity<double> cylinder_velocity;
-    cylinder_velocity.translational() = Vector3<double>(-1.0, 0.0, 0.0);
-    // Choose consistent rotational velocity so
-    // rotational velocity x (0, 0, -r) = - translational velocity
-    cylinder_velocity.rotational() = Vector3<double>(0.0, -2.5, 0.0);
-    std::unique_ptr<SpatialVelocityTimeDependent> cylinder_velocity_ptr =
-            std::make_unique<SpatialVelocityTimeDependent>(cylinder_velocity);
-    double cylinder_mu = 0.4;
-    double cylinder_height = 2;
-    double cylinder_radius = 0.025;
-    std::unique_ptr<AnalyticLevelSet> cylinder_level_set =
-                            std::make_unique<CylinderLevelSet>(cylinder_height,
-                                                               cylinder_radius);
-    math::RollPitchYaw cylinder_rpw = {M_PI/2.0, 0.0, 0.0};
-    Vector3<double> cylinder_translation = {0.8, 0.1, 0.06};
-    math::RigidTransform<double> cylinder_pose =
-            math::RigidTransform<double>(cylinder_rpw, cylinder_translation);
-    objects.AddCollisionObject(std::move(cylinder_level_set),
-                               std::move(cylinder_pose),
-                               std::move(cylinder_velocity_ptr), cylinder_mu);
-
     // Initialize a sphere
-    double radius = 0.04;
+    double radius = 0.2;
     SphereLevelSet level_set_sphere = SphereLevelSet(radius);
-    Vector3<double> translation_sphere = {0.4, 0.1, 0.05};
+    Vector3<double> translation_sphere = {1.0, 1.0, 2.0};
     math::RigidTransform<double> pose_sphere =
                             math::RigidTransform<double>(translation_sphere);
     multibody::SpatialVelocity<double> velocity_sphere;
@@ -96,10 +83,8 @@ int DoMain() {
 
     double E = 8e4;
     double nu = 0.49;
-    double yield_stress = 0.01*E;
-    std::unique_ptr<StvkHenckyWithVonMisesModel> elastoplastic_model
-            = std::make_unique<StvkHenckyWithVonMisesModel>(E, nu,
-                                                            yield_stress);
+    std::unique_ptr<CorotatedElasticModel> elastoplastic_model
+            = std::make_unique<CorotatedElasticModel>(E, nu);
     MPMDriver::MaterialParameters m_param_sphere{
                                                 std::move(elastoplastic_model),
                                                 1200,

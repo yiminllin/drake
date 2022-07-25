@@ -13,6 +13,21 @@ load(
 load("//tools/lint:lint.bzl", "add_lint_tests")
 
 drake_cc_binary(
+    name = "oscillating_plane",
+    srcs = [
+        "examples/oscillating-plane/main.cpp",
+    ],
+    deps = [
+        ":CorotatedElasticModel",
+        ":MPMDriver",
+        ":SpatialVelocityTimeDependent",
+        "//common:essential",
+        "//math:geometric_transform",
+        "@partio",
+    ],
+)
+
+drake_cc_binary(
     name = "mpm",
     srcs = [
         "main.cpp",
@@ -20,6 +35,7 @@ drake_cc_binary(
     deps = [
         ":CorotatedElasticModel",
         ":MPMDriver",
+        ":SpatialVelocityTimeDependent",
         ":StvkHenckyWithVonMisesModel",
         "//common:essential",
         "//math:geometric_transform",
@@ -60,6 +76,21 @@ drake_cc_library(
     ],
     deps = [
         "//common:essential",
+    ]
+)
+
+drake_cc_library(
+    name = "SpatialVelocityTimeDependent",
+    srcs = [
+        "SpatialVelocityTimeDependent.cc",
+    ],
+    hdrs = [
+        "SpatialVelocityTimeDependent.h",
+    ],
+    deps = [
+        "//common:essential",
+        "//multibody/fem:matrix_utilities",
+        "//multibody/math:spatial_algebra",
     ],
 )
 
@@ -166,6 +197,7 @@ drake_cc_library(
     ],
     deps = [
         ":AnalyticLevelSet",
+        ":SpatialVelocityTimeDependent",
         "//common:essential",
         "//math:geometric_transform",
         "//multibody/fem:matrix_utilities",
@@ -354,6 +386,7 @@ drake_cc_googletest(
     deps = [
         ":AnalyticLevelSet",
         ":Grid",
+        ":SpatialVelocityTimeDependent",
         ":TotalMassAndMomentum",
         "//common/test_utilities:eigen_matrix_compare",
         "//geometry/proximity:posed_half_space",
@@ -377,6 +410,7 @@ drake_cc_googletest(
     name = "CollisionObject_test",
     deps = [
         ":CollisionObject",
+        ":SpatialVelocityTimeDependent",
         "//common:essential",
         "//common/test_utilities:eigen_matrix_compare",
         "//geometry/proximity:posed_half_space",
