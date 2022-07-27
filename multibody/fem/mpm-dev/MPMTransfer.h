@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <memory>
 #include <numeric>
 #include <tuple>
@@ -64,8 +65,6 @@ class MPMTransfer {
         Vector3<double> velocity;
     };
 
-    void InitializeSparseGrid(const Particles& particles, SparseGrid* grid);
-
     // Sort the particles according to the batch number, in increasing order.
     // As below shown, o denotes the grid points, $ denotes the batch centered
     // around the grid point. # of batch = # of grid points
@@ -97,7 +96,8 @@ class MPMTransfer {
     // The batches are ordered in a lexiographical ordering, similar to grid
     // points.
     // SortParticles also initialize the sparse grid with active grid points
-    void SortParticles(const SparseGrid& grid, Particles* particles);
+    void SortParticles(const std::vector<Vector3<int>>& batch_indices,
+                       const SparseGrid& grid, Particles* particles);
 
     // Update the evalutions and gradients of BSpline bases on each particle,
     // and update bases_val_particles_ and bases_grad_particles_

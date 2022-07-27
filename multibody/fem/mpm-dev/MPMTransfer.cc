@@ -6,8 +6,22 @@ namespace mpm {
 
 void MPMTransfer::SetUpTransfer(SparseGrid* grid,
                                 Particles* particles) {
-    InitializeSparseGrid(*particles, grid);
-    SortParticles(*grid, particles);
+    int num_particles = particles->get_num_particles();
+    std::vector<Vector3<int>> batch_indices(num_particles);
+    // Preallocate the indices of batches
+    for (int p = 0; p < num_particles; ++p) {
+        batch_indices[p] = CalcBatchIndex(particles->get_position(p),
+                                          grid->get_h());
+    }
+    // If the sparse grid is uninitialized, reserve the space
+    if (grid->get_num_active_gridpt() == 0) {
+        grid->reserve(2*particles->get_num_particles());
+    }
+
+    // TODO(yiminlin.tri): expensive... To optimize
+    grid->UpdateActiveGridPoints(batch_indices, *particles);
+    SortParticles(batch_indices, *grid, particles);
+    // TODO(yiminlin.tri): expensive... To optimize
     UpdateBasisAndGradientParticles(*grid, *particles);
     // TODO(yiminlin.tri): Dp_inv_ is hardcoded for quadratic B-Spline
     // The values of Dp_inv_ are different for different B-Spline bases
@@ -37,9 +51,9 @@ void MPMTransfer::TransferParticlesToGrid(const Particles& particles,
             // Preallocate positions at grid points in the current batch on a
             // local array
             batch_index_3d = grid->Expand1DIndex(i);
-            for (int a = -1; a <= 1; ++a) {
-            for (int b = -1; b <= 1; ++b) {
             for (int c = -1; c <= 1; ++c) {
+            for (int b = -1; b <= 1; ++b) {
+            for (int a = -1; a <= 1; ++a) {
                 idx_local = (a+1) + 3*(b+1) + 9*(c+1);
                 batch_positions[idx_local] =
                     grid->get_position(batch_index_3d+Vector3<int>(a, b, c));
@@ -104,9 +118,9 @@ void MPMTransfer::TransferGridToParticles(const SparseGrid& grid, double dt,
         bi = batch_index_3d[0];
         bj = batch_index_3d[1];
         bk = batch_index_3d[2];
-        for (int a = -1; a <= 1; ++a) {
-        for (int b = -1; b <= 1; ++b) {
         for (int c = -1; c <= 1; ++c) {
+        for (int b = -1; b <= 1; ++b) {
+        for (int a = -1; a <= 1; ++a) {
             idx_local = (a+1) + 3*(b+1) + 9*(c+1);
             Vector3<int> index_3d = Vector3<int>(bi+a, bj+b, bk+c);
             batch_states[idx_local].position = grid.get_position(index_3d);
@@ -125,67 +139,24 @@ void MPMTransfer::TransferGridToParticles(const SparseGrid& grid, double dt,
     }
 }
 
-void MPMTransfer::InitializeSparseGrid(const Particles& particles,
-                                       SparseGrid* grid) {
-    Vector3<int> batch_idx_3D;
-    int num_particles = particles.get_num_particles();
-    // TODO(yiminlin.tri): hardcoded 27
-    std::vector<Vector3<int>> active_gridpts(27*num_particles);
-
-    // Determine the set of active grids points by iterating through all
-    // particles
-    for (int p = 0; p < num_particles; ++p) {
-        batch_idx_3D = CalcBatchIndex(particles.get_position(p), grid->get_h());
-        for (int a = -1; a <= 1; ++a) {
-        for (int b = -1; b <= 1; ++b) {
-        for (int c = -1; c <= 1; ++c) {
-            active_gridpts[27*p+((a+1)+3*(b+1)+9*(c+1))] =
-                                        Vector3<int>(batch_idx_3D(0)+c,
-                                                    batch_idx_3D(1)+b,
-                                                    batch_idx_3D(2)+a);
-        }
-        }
-        }
-    }
-
-    std::sort(active_gridpts.begin(), active_gridpts.end(),
-              [](Vector3<int> pt0, Vector3<int> pt1) {
-                return ((pt0(2) < pt1(2)) ||
-                        ((pt0(2) == pt1(2)) && (pt0(1) < pt1(1))) ||
-                        ((pt0(2) == pt1(2)) && (pt0(1) == pt1(1))
-                      && (pt0(0) < pt1(0))));
-              });
-
-    active_gridpts.erase(unique(active_gridpts.begin(),
-                                       active_gridpts.end()),
-                                       active_gridpts.end());
-
-    // TODO(yiminlin.tri): Magic number
-    grid->reserve(2*active_gridpts.size());
-    grid->UpdateActiveGridPoints(std::move(active_gridpts));
-}
-
-void MPMTransfer::SortParticles(const SparseGrid& grid, Particles* particles) {
-    Vector3<int> batch_idx_3D;
+void MPMTransfer::SortParticles(const std::vector<Vector3<int>>& batch_indices,
+                                const SparseGrid& grid, Particles* particles) {
+    // Vector3<int> batch_idx_3D;
     int num_particles = particles->get_num_particles();
     // A temporary array storing the particle index permutation after sorting
     std::vector<size_t> sorted_indices(num_particles);
-    // A temporary array storing the batch index correspond to each particle
-    std::vector<int> batch_indices(num_particles);
+    // A temporary array storing the 1D batch index correspond to each particle
+    std::vector<int> batch_indices_1D(num_particles);
 
-    // Preallocate the indices of batches
-    // TODO(yiminlin.tri): duplicate calculation with InitializeSparseGrid
     for (int p = 0; p < num_particles; ++p) {
-        batch_idx_3D = CalcBatchIndex(particles->get_position(p), grid.get_h());
-        batch_indices[p] = grid.Reduce3DIndex(batch_idx_3D);
+        batch_indices_1D[p] = grid.Reduce3DIndex(batch_indices[p]);
     }
 
-    // Initialize batch_size to be 0 for every batch
     batch_sizes_.resize(grid.get_num_active_gridpt());
     fill(batch_sizes_.begin(), batch_sizes_.end(), 0);
     // Accumulate batch sizes
     for (int p = 0; p < num_particles; ++p) {
-        ++batch_sizes_[batch_indices[p]];
+        ++batch_sizes_[batch_indices_1D[p]];
     }
 
     // Calculate the number of batches
@@ -194,10 +165,11 @@ void MPMTransfer::SortParticles(const SparseGrid& grid, Particles* particles) {
         if (batch_sizes_[i] > 0) {  num_batches_++;  }
     }
 
+    // start_time = Clock::now();
     std::iota(sorted_indices.begin(), sorted_indices.end(), 0);
     std::sort(sorted_indices.begin(), sorted_indices.end(),
-       [&grid, &batch_indices](size_t i1, size_t i2) {
-                                return batch_indices[i1] < batch_indices[i2];});
+       [&grid, &batch_indices_1D](size_t i1, size_t i2) {
+                                return batch_indices_1D[i1] < batch_indices_1D[i2];});
 
     // Reorder the particles
     particles->Reorder(sorted_indices);
@@ -247,9 +219,9 @@ void MPMTransfer::EvalBasisOnBatch(int p, const Vector3<double>& xp,
 
     // TODO(yiminlin.tri): Could be nicer to refactor this a, b, c loop, with
     //                     Vector<int>
-    for (int a = -1; a <= 1; ++a) {
-    for (int b = -1; b <= 1; ++b) {
     for (int c = -1; c <= 1; ++c) {
+    for (int b = -1; b <= 1; ++b) {
+    for (int a = -1; a <= 1; ++a) {
         grid_index(0) = bi+a;
         grid_index(1) = bj+b;
         grid_index(2) = bk+c;
@@ -279,9 +251,9 @@ void MPMTransfer::AccumulateGridStatesOnBatch(int p, double m_p,
     double Ni_p;
 
     // Accumulate on local scratch pads
-    for (int a = -1; a <= 1; ++a) {
-    for (int b = -1; b <= 1; ++b) {
     for (int c = -1; c <= 1; ++c) {
+    for (int b = -1; b <= 1; ++b) {
+    for (int a = -1; a <= 1; ++a) {
         idx_local = (a+1) + 3*(b+1) + 9*(c+1);
         Ni_p = bases_val_particles_[p][idx_local];
         const Vector3<double>& x_i = batch_positions[idx_local];
@@ -315,9 +287,9 @@ void MPMTransfer::WriteBatchStateToGrid(const Vector3<int>& batch_index_3d,
     Vector3<int> grid_index;
 
     // Put local scratch pad states into the grid
-    for (int a = -1; a <= 1; ++a) {
-    for (int b = -1; b <= 1; ++b) {
     for (int c = -1; c <= 1; ++c) {
+    for (int b = -1; b <= 1; ++b) {
+    for (int a = -1; a <= 1; ++a) {
         grid_index(0) = bi+a;
         grid_index(1) = bj+b;
         grid_index(2) = bk+c;
@@ -347,9 +319,9 @@ void MPMTransfer::UpdateParticleStates(const std::array<BatchState, 27>&
     Matrix3<double> grad_vp_new = Matrix3<double>::Zero();
 
     // For each grid points affecting the current particle
-    for (int a = -1; a <= 1; ++a) {
-    for (int b = -1; b <= 1; ++b) {
     for (int c = -1; c <= 1; ++c) {
+    for (int b = -1; b <= 1; ++b) {
+    for (int a = -1; a <= 1; ++a) {
         idx_local = (a+1) + 3*(b+1) + 9*(c+1);
         Ni_p = bases_val_particles_[p][idx_local];
         const Vector3<double>& gradNi_p = bases_grad_particles_[p][idx_local];

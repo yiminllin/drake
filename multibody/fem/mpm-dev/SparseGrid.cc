@@ -78,10 +78,51 @@ void SparseGrid::AccumulateForce(const Vector3<int>& index_3d,
     forces_[Reduce3DIndex(index_3d)] += force;
 }
 
+bool SparseGrid::is_active(const Vector3<int>& gridpt) const {
+    return index_map_.count(gridpt) == 1;
+}
+
 void SparseGrid::UpdateActiveGridPoints(
-                                    std::vector<Vector3<int>> active_gridpts) {
+                            const std::vector<Vector3<int>>& active_gridpts) {
     num_active_gridpts_ = active_gridpts.size();
-    active_gridpts_ = std::move(active_gridpts);
+    for (int i = 0; i < num_active_gridpts_; ++i) {
+        active_gridpts_[i] = active_gridpts[i];
+        index_map_[active_gridpts_[i]] = i;
+    }
+}
+
+void SparseGrid::UpdateActiveGridPoints(const std::vector<Vector3<int>>& batch_indices,
+                                        const Particles& particles) {
+    // Clear active grid points
+    num_active_gridpts_ = 0;
+    active_gridpts_.clear();
+    index_map_.clear();
+
+    // Determine the set of active grids points by iterating through all
+    // particles
+    for (int p = 0; p < particles.get_num_particles(); ++p) {
+        const Vector3<int>& batch_idx_3D = batch_indices[p];
+        for (int c = -1; c <= 1; ++c) {
+        for (int b = -1; b <= 1; ++b) {
+        for (int a = -1; a <= 1; ++a) {
+            Vector3<int> gridpt = {batch_idx_3D(0)+a, batch_idx_3D(1)+b,
+                                   batch_idx_3D(2)+c};
+            if (index_map_.count(gridpt) == 0) {
+                active_gridpts_[num_active_gridpts_++] = gridpt;
+                index_map_[gridpt] = 1;
+            }
+        }
+        }
+        }
+    }
+
+    std::sort(active_gridpts_.begin(), active_gridpts_.end(),
+              [](Vector3<int> pt0, Vector3<int> pt1) {
+                return ((pt0(2) < pt1(2)) ||
+                        ((pt0(2) == pt1(2)) && (pt0(1) < pt1(1))) ||
+                        ((pt0(2) == pt1(2)) && (pt0(1) == pt1(1))
+                      && (pt0(0) < pt1(0))));
+              });
 
     for (int i = 0; i < num_active_gridpts_; ++i) {
         index_map_[active_gridpts_[i]] = i;

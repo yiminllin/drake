@@ -195,6 +195,7 @@ drake_cc_library(
     ],
     deps = [
         ":KinematicCollisionObjects",
+        ":Particles",
         ":TotalMassAndMomentum",
         ":Utils",
         "//common:essential",

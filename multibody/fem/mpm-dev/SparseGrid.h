@@ -8,6 +8,7 @@
 
 #include "drake/common/eigen_types.h"
 #include "drake/multibody/fem/mpm-dev/KinematicCollisionObjects.h"
+#include "drake/multibody/fem/mpm-dev/Particles.h"
 #include "drake/multibody/fem/mpm-dev/TotalMassAndMomentum.h"
 #include "drake/multibody/fem/mpm-dev/Utils.h"
 
@@ -47,9 +48,17 @@ class SparseGrid {
     void AccumulateForce(const Vector3<int>& index_3d,
                          const Vector3<double>& force);
 
+    // Check if the given grid point is an active grid point
+    bool is_active(const Vector3<int>& gridpt) const;
+
     // Update active_gridpts_ with the given input. Assume the input is
     // already sorted without any duplicates.
-    void UpdateActiveGridPoints(std::vector<Vector3<int>> active_gridpts);
+    void UpdateActiveGridPoints(const std::vector<Vector3<int>>& active_gridpts);
+
+    // Update active_gridpts_ with the given input. Assume the input is
+    // already sorted without any duplicates.
+    void UpdateActiveGridPoints(const std::vector<Vector3<int>>& batch_indices,
+                                const Particles& particles);
 
     // Rescale the velocities_ vector by the mass_, used in P2G where we
     // temporarily store momentum mv into velocities
