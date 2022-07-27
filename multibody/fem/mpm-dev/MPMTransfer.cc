@@ -15,7 +15,8 @@ void MPMTransfer::SetUpTransfer(SparseGrid* grid,
     }
     // If the sparse grid is uninitialized, reserve the space
     if (grid->get_num_active_gridpt() == 0) {
-        grid->reserve(2*particles->get_num_particles());
+        // TODO(yiminlin.tri): Magic number
+        grid->reserve(3*particles->get_num_particles());
     }
 
     // TODO(yiminlin.tri): expensive... To optimize
@@ -33,8 +34,9 @@ void MPMTransfer::TransferParticlesToGrid(const Particles& particles,
                                           SparseGrid* grid) {
     int p_start, p_end, idx_local;
     double mass_p, ref_volume_p;
+    int num_active_gridpts = grid->get_num_active_gridpt();
     // Local sum of states m_i v_i f_i on the grid points
-    std::array<GridState, 27> local_pad;
+    std::vector<std::array<GridState, 27>> local_pads(num_active_gridpts);
     // Positions of grid points in the batch
     std::array<Vector3<double>, 27> batch_positions;
     Vector3<int> batch_index_3d;
@@ -44,7 +46,7 @@ void MPMTransfer::TransferParticlesToGrid(const Particles& particles,
 
     // For each batch of particles
     p_start = 0;
-    for (int i = 0; i < grid->get_num_active_gridpt(); ++i) {
+    for (int i = 0; i < num_active_gridpts; ++i) {
         if (batch_sizes_[i] != 0) {
             p_end = p_start + batch_sizes_[i];
 
@@ -62,7 +64,7 @@ void MPMTransfer::TransferParticlesToGrid(const Particles& particles,
             }
 
             // Clear local scratch pad
-            for (auto& s : local_pad) { s.reset(); }
+            for (auto& s : local_pads[i])  {  s.reset(); }
 
             // For each particle in the batch (Assume particles are sorted with
             // respect to the batch index), accmulate masses, momemtum, and
@@ -77,14 +79,19 @@ void MPMTransfer::TransferParticlesToGrid(const Particles& particles,
                                             particles.get_velocity(p),
                                             C_p,
                                             particles.get_kirchhoff_stress(p),
-                                    // batch_positions, &local_pads[b]);
-                                            batch_positions, &local_pad);
+                                            batch_positions, &local_pads[i]);
+                                            // batch_positions, &local_pad);
             }
 
-            // Put sums of local scratch pads to grid
-            WriteBatchStateToGrid(batch_index_3d, local_pad, grid);
-
             p_start = p_end;
+        }
+    }
+
+    for (int i = 0; i < num_active_gridpts; ++i) {
+        if (batch_sizes_[i] != 0) {
+            batch_index_3d = grid->Expand1DIndex(i);
+            // Put sums of local scratch pads to grid
+            WriteBatchStateToGrid(batch_index_3d, local_pads[i], grid);
         }
     }
 
