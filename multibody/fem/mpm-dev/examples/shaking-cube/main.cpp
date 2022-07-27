@@ -23,14 +23,38 @@ namespace drake {
 namespace multibody {
 namespace mpm {
 
-multibody::SpatialVelocity<double> oscillating_velocity(double t) {
+multibody::SpatialVelocity<double> left_hand_velocity(double t) {
     multibody::SpatialVelocity<double> wall_velocity;
     wall_velocity.rotational() = Vector3<double>(0.0, 0.0, 0.0);
-    double freq = 1.0;
-    if (static_cast<int>(trunc(t / freq)) % 2 == 0) {
+    double freq = 0.4; // multiple of 0.04
+    if (t < 0.36) {
+        wall_velocity.translational() = Vector3<double>(0.5, 0.0, 0.0);
+    } else if (t < 1.36) {
         wall_velocity.translational() = Vector3<double>(0.0, 0.0, 1.0);
     } else {
-        
+        if (static_cast<int>(trunc((t-1.36) / freq)) % 2 == 0) {
+            wall_velocity.translational() = Vector3<double>(0.0, 0.0, -1.0);
+        } else {
+            wall_velocity.translational() = Vector3<double>(0.0, 0.0, 1.0);
+        }
+    }
+    return wall_velocity;
+}
+
+multibody::SpatialVelocity<double> right_hand_velocity(double t) {
+    multibody::SpatialVelocity<double> wall_velocity;
+    wall_velocity.rotational() = Vector3<double>(0.0, 0.0, 0.0);
+    double freq = 0.4;
+    if (t < 0.36) {
+        wall_velocity.translational() = Vector3<double>(-0.5, 0.0, 0.0);
+    } else if (t < 1.36) {
+        wall_velocity.translational() = Vector3<double>(0.0, 0.0, 1.0);
+    } else {
+        if (static_cast<int>(trunc((t-1.36) / freq)) % 2 == 0) {
+            wall_velocity.translational() = Vector3<double>(0.0, 0.0, -1.0);
+        } else {
+            wall_velocity.translational() = Vector3<double>(0.0, 0.0, 1.0);
+        }
     }
     return wall_velocity;
 }
@@ -41,9 +65,11 @@ int DoMain() {
     };
 
     MPMParameters::SolverParameters s_param {
-        2e-0,                                  // End time
-        5e-4,                                  // Time step size
-        0.1,                                   // Grid size
+        // 3e-2,                                  // End time
+        4e-0,                                  // End time
+        1e-4,                                  // Time step size
+        // 0.02,                                   // Grid size
+        0.02,                                   // Grid size
     };
 
     MPMParameters::IOParameters io_param {
@@ -57,43 +83,59 @@ int DoMain() {
 
     KinematicCollisionObjects objects = KinematicCollisionObjects();
 
+    // Initialize the bottom wall
+    SpatialVelocity<double> zero_velocity;
+    zero_velocity.SetZero();
+    std::unique_ptr<SpatialVelocityTimeDependent> bottom_wall_velocity_ptr =
+        std::make_unique<SpatialVelocityTimeDependent>(zero_velocity);
+    double bottom_wall_mu = 1.0;
+    Vector3<double> bottom_wall_normal = {0.0, 0.0, 1.0};
+    std::unique_ptr<AnalyticLevelSet> bottom_wall_level_set =
+                        std::make_unique<HalfSpaceLevelSet>(bottom_wall_normal);
+    Vector3<double> bottom_wall_translation = {0.0, 0.0, 0.0};
+    math::RigidTransform<double> bottom_wall_pose =
+                        math::RigidTransform<double>(bottom_wall_translation);
+    objects.AddCollisionObject(std::move(bottom_wall_level_set),
+                               std::move(bottom_wall_pose),
+                               std::move(bottom_wall_velocity_ptr),
+                               bottom_wall_mu);
     // Initialize the left wall
-    std::unique_ptr<SpatialVelocityTimeDependent> left_wall_velocity_ptr =
-        std::make_unique<SpatialVelocityTimeDependent>(oscillating_velocity);
-    double left_wall_mu = 10.0;
-    Vector3<double> left_wall_normal = {1.0, 0.0, 0.0};
-    std::unique_ptr<AnalyticLevelSet> left_wall_level_set =
-                            std::make_unique<HalfSpaceLevelSet>(left_wall_normal);
-    Vector3<double> left_wall_translation = {0.8, 0.0, 0.0};
-    math::RigidTransform<double> left_wall_pose =
-                            math::RigidTransform<double>(left_wall_translation);
-    objects.AddCollisionObject(std::move(left_wall_level_set), std::move(left_wall_pose),
-                               std::move(left_wall_velocity_ptr), left_wall_mu);
+    std::unique_ptr<SpatialVelocityTimeDependent> left_hand_velocity_ptr =
+        std::make_unique<SpatialVelocityTimeDependent>(left_hand_velocity);
+    double left_hand_mu = 0.01;
+    Vector3<double> left_hand_xscale = {0.1, 0.15, 0.15};
+    std::unique_ptr<AnalyticLevelSet> left_hand_level_set =
+                            std::make_unique<BoxLevelSet>(left_hand_xscale);
+    Vector3<double> left_hand_translation = {-0.3, 0.0, 0.15};
+    math::RigidTransform<double> left_hand_pose =
+                            math::RigidTransform<double>(left_hand_translation);
+    objects.AddCollisionObject(std::move(left_hand_level_set), std::move(left_hand_pose),
+                               std::move(left_hand_velocity_ptr), left_hand_mu);
 
     // Initialize the right wall
-    std::unique_ptr<SpatialVelocityTimeDependent> right_wall_velocity_ptr =
-        std::make_unique<SpatialVelocityTimeDependent>(oscillating_velocity);
-    double right_wall_mu = 10.0;
-    Vector3<double> right_wall_normal = {-1.0, 0.0, 0.0};
-    std::unique_ptr<AnalyticLevelSet> right_wall_level_set =
-                            std::make_unique<HalfSpaceLevelSet>(right_wall_normal);
-    Vector3<double> right_wall_translation = {1.2, 0.0, 0.0};
-    math::RigidTransform<double> right_wall_pose =
-                            math::RigidTransform<double>(right_wall_translation);
-    objects.AddCollisionObject(std::move(right_wall_level_set), std::move(right_wall_pose),
-                               std::move(right_wall_velocity_ptr), right_wall_mu);
+    std::unique_ptr<SpatialVelocityTimeDependent> right_hand_velocity_ptr =
+        std::make_unique<SpatialVelocityTimeDependent>(right_hand_velocity);
+    double right_hand_mu = 0.01;
+    Vector3<double> right_hand_xscale = {0.1, 0.15, 0.15};
+    std::unique_ptr<AnalyticLevelSet> right_hand_level_set =
+                            std::make_unique<BoxLevelSet>(right_hand_xscale);
+    Vector3<double> right_hand_translation = {0.3, 0.0, 0.15};
+    math::RigidTransform<double> right_hand_pose =
+                            math::RigidTransform<double>(right_hand_translation);
+    objects.AddCollisionObject(std::move(right_hand_level_set), std::move(right_hand_pose),
+                               std::move(right_hand_velocity_ptr), right_hand_mu);
 
     // Initialize a sphere
-    double radius = 0.2;
+    double radius = 0.05;
     SphereLevelSet level_set_sphere = SphereLevelSet(radius);
-    Vector3<double> translation_sphere = {1.0, 1.0, 2.0};
+    Vector3<double> translation_sphere = {0.0, 0.0, 0.6};
     math::RigidTransform<double> pose_sphere =
                             math::RigidTransform<double>(translation_sphere);
     multibody::SpatialVelocity<double> velocity_sphere;
     velocity_sphere.translational() = Vector3<double>::Zero();
     velocity_sphere.rotational() = Vector3<double>{0.0, 0.0, 0.0};
 
-    double E = 8e4;
+    double E = 8e5;
     double nu = 0.49;
     std::unique_ptr<CorotatedElasticModel> elastoplastic_model
             = std::make_unique<CorotatedElasticModel>(E, nu);
