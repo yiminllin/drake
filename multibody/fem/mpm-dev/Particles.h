@@ -103,7 +103,7 @@ class Particles {
     // Return the sum of mass, momentum and angular momentum of all particles.
     // The sum of particles' angular momentums is ∑ mp xp×vp + Bp^T:ϵ
     // by https://www.math.ucla.edu/~jteran/papers/JST17.pdf section 5.3.1
-    TotalMassAndMomentum GetTotalMassAndMomentum() const;
+    TotalMassAndMomentum GetTotalMassAndMomentum(double g) const;
 
  private:
     int num_particles_;

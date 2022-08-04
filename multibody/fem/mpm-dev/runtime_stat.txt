@@ -1,0 +1,39 @@
+==== Total run                   time: 5.55454 seconds
+==== Total IO                    time: 0.00936315 seconds
+==== Total stress/plastic update time: 1.13343 seconds
+==== Total transfer setup        time: 1.23179 seconds
+==== Total P2G                   time: 1.75869 seconds
+==== Total update velocity       time: 0.0910941 seconds
+==== Total apply forces          time: 0.246168 seconds
+==== Total collision objs update time: 0.00318313 seconds
+==== Total enforce BC            time: 0.225558 seconds
+==== Total G2P                   time: 0.848118 seconds
+==== Total particles advection   time: 0.00153166 seconds
+
+==== Total run                   time: 60.1762 seconds
+==== Total IO                    time: 0.0255814 seconds
+==== Total stress/plastic update time: 11.4991 seconds
+==== Total transfer setup        time: 24.5061 seconds
+==== Total P2G                   time: 11.0772 seconds
+==== Total update velocity       time: 0.0564675 seconds
+==== Total apply forces          time: 0.0573751 seconds
+==== Total collision objs update time: 0.0300951 seconds
+==== Total enforce BC            time: 1.5486 seconds
+==== Total G2P                   time: 11.3055 seconds
+==== Total particles advection   time: 0.0232813 seconds
+
+
+==== Total run                   time: 58.4898 seconds
+==== Total IO                    time: 0.0227651 seconds
+==== Total stress/plastic update time: 11.3793 seconds
+==== Total transfer setup        time: 23.3317 seconds
+==== Total P2G                   time: 10.5677 seconds
+==== Total update velocity       time: 0.0566665 seconds
+==== Total apply forces          time: 0.0696669 seconds
+==== Total collision objs update time: 0.0270666 seconds
+==== Total enforce BC            time: 1.52785 seconds
+==== Total G2P                   time: 11.4368 seconds
+==== Total particles advection   time: 0.023944 seconds
+
+
+

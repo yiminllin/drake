@@ -1,3 +1,39 @@
 bazel build //multibody/fem/mpm-dev:*
 bazel test //multibody/fem/mpm-dev/...
-bazel run //multibody/fem/mpm-dev:run_mpm
+bazel run //multibody/fem/mpm-dev:{The binary case name}
+
+To construct a user-defined case, we need 3 essential things:
+1. MPMParameters to define the parameters for the simulation
+2. KinematicCollisionObjects to define the "rigid bodies" in the simulation
+3. The level set information and MaterialParameters of the deformable object 
+   (Currently only support initialize objects with primitive geometries: cube, sphere, cylinder)
+
+
+1. MPMParameters composed of three parts:
+   - Physical parameters, specify: [Vector3] gravity (or constant force field in the domain)
+				   [function] velocity_field(position, time, *velocity) a function that overwrite the velocity with user-prescribed velocity, given position and time.
+
+   - Solver parameters, specify: [double] end time of the simulation
+				 [double] the time step size in the first step (usually a good idea to make it sufficiently small, otherwise there maybe segfault)
+				 [double] the grid size, it determines how accurate (resolved) the simulation is. The lower the more resolved, and slower to run.
+				 [double] The CFL number, it is a scaling factor on the variable timestep size. When simulation breaks/unstable, try to make CFL number smaller and take a smaller time step.
+
+   - IO parameters, specify: [string] case name, the name of output files
+                             [string] path to output directory. need to mkdir in advance. No slash at the end
+			     [double] interval of dumping output files and statistics. i.e. 0.04 means we dump output files every 0.04s in the simulation
+
+2. KinematicCollisionObjects are the rigid objects in the simulation. Usually, the workflow is:
+   - Initialize an KinematicCollisionObjects object.
+   - call AddCollisionObject(...) for each rigid objects you want to add
+   - call driver->InitializeKinematicCollisionObjects(...) to put them in the simulation
+   See examples/ for more details. The key component is AddCollisionObject(...), which takes in arguments
+     [AnalyticLevelSet] a level set in the reference domain describing the geometry of the object
+     [RigidTransform] a rigid transform describing the pose of the object in the world frame
+     [SpatialVelocity/SpatialVelocityTimeDependent] a constant/time-dependent spatial velocity (translational+rotational) of the rigid object
+     [double] The friction coefficient of the rigid body.
+
+3. The deformable object you want to simulate is initialized by the workflow:
+     [AnalyticLevelSet] a level set in the reference domain describing the geometry of the object
+     [RigidTransform] a rigid transform describing the pose of the object in the world frame
+     [MaterialParameters] specify the material properties of the deformable object
+

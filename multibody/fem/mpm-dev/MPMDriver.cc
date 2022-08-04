@@ -7,7 +7,8 @@ namespace mpm {
 MPMDriver::MPMDriver(MPMParameters param):
                                 param_(std::move(param)),
                                 grid_(param.solver_param.h),
-                                gravitational_force_(param.physical_param.g) {
+                                gravitational_force_(param.physical_param.g),
+                                dilatational_wavespd_(0.0) {
     DRAKE_DEMAND(param.solver_param.endtime >= 0.0);
     DRAKE_DEMAND(param.solver_param.dt > 0.0);
 }
@@ -36,14 +37,34 @@ void MPMDriver::DoTimeStepping() {
             dt = endtime - t;
         }
         // Check the CFL condition
-        checkCFL(dt);
-        AdvanceOneTimeStep(dt);
+        if (t > 0) {
+            UpdateTimeStep(&dt);
+        }
+        AdvanceOneTimeStep(dt, t+dt);  // TODO(yiminlin.tri): we used updated
+                                       //                     velocity field
         step++;
+    
+        // TotalMassAndMomentum total =
+        // particles_.GetTotalMassAndMomentum(param_.physical_param.g[2]);
+        // std::ofstream output_momentum;
+        // output_momentum.open(param_.io_param.output_directory + "/statistics_momentum.dat",
+        //                         std::fstream::app);
+        // if (output_momentum.is_open()) {
+        //     output_momentum << t                        << std::endl;
+        //     output_momentum << total.sum_momentum.norm() << std::endl;
+        // }
+
+        std::ofstream output_statistics;
+        output_statistics.open(param_.io_param.output_directory + "/statistics.dat",
+                               std::fstream::app);
         if ((t >= io_step*param_.io_param.write_interval) || (is_last_step)) {
             std::cout << "==== MPM Step " << step << " iostep " << io_step <<
                          ", at t = " << t+dt << std::endl;
             start_io_time = Clock::now();
+            // Write to output
             WriteParticlesToBgeo(io_step++);
+            // Write to statistics
+            DumpStatistics(t, step, output_statistics);
             const auto elapsed_time
                     = std::chrono::duration_cast<Duration>(Clock::now()
                                                     - start_io_time).count();
@@ -56,6 +77,30 @@ void MPMDriver::DoTimeStepping() {
     run_time_statistics_.time_total += total_time;
 
     PrintRunTimeStatistics();
+}
+
+void MPMDriver::DumpStatistics(double t, double step, std::ofstream& output_statistics)
+                                                                        const {
+    TotalMassAndMomentum total =
+        particles_.GetTotalMassAndMomentum(param_.physical_param.g[2]);
+    double total_energy = total.sum_kinetic_energy
+                        + total.sum_strain_energy
+                        + total.sum_potential_energy;
+    if (output_statistics.is_open()) {
+        output_statistics << t                           << std::endl;
+        output_statistics << step                        << std::endl;
+        output_statistics << total.sum_mass              << std::endl;
+        output_statistics << total.sum_kinetic_energy    << std::endl;
+        output_statistics << total.sum_strain_energy     << std::endl;
+        output_statistics << total.sum_potential_energy  << std::endl;
+        output_statistics << total_energy                << std::endl;
+        output_statistics << total.sum_momentum.norm()   << std::endl;
+        output_statistics << total.sum_angular_momentum.norm()  << std::endl;
+        output_statistics << sum_boundary_impulse_n_  << std::endl;
+        output_statistics << sum_boundary_impulse_t_  << std::endl;
+        output_statistics << sum_gravity_impulse_n_  << std::endl;
+        output_statistics << sum_gravity_impulse_t_  << std::endl;
+    }
 }
 
 // TODO(yiminlin.tri): Not tested.
@@ -142,6 +187,12 @@ void MPMDriver::InitializeParticles(const AnalyticLevelSet& level_set,
                                kirchhoff_stress_p,
                                B_p, std::move(elastoplastic_model_p));
     }
+
+    // Update dilatational wave speed
+    double lambda = m_param.elastoplastic_model->get_lambda();
+    double mu     = m_param.elastoplastic_model->get_mu();
+    dilatational_wavespd_ = std::max(dilatational_wavespd_,
+                                     std::sqrt((lambda+2*mu)/m_param.density));
 }
 
 void MPMDriver::WriteParticlesToBgeo(int io_step) {
@@ -190,17 +241,19 @@ void MPMDriver::PrintRunTimeStatistics() const {
             << " seconds" << std::endl;
 }
 
-void MPMDriver::checkCFL(double dt) {
+void MPMDriver::UpdateTimeStep(double* dt) {
+    double h = grid_.get_h();
+    double dt_new = std::numeric_limits<double>::infinity();
     for (const auto& v : particles_.get_velocities()) {
-        if (!(std::max({std::abs(dt*v(0)),
-                        std::abs(dt*v(1)),
-                        std::abs(dt*v(2))}) <= grid_.get_h())) {
-            throw std::runtime_error("CFL condition violation");
-        }
+        dt_new = std::min(dt_new,
+                          h/std::max({std::abs(dilatational_wavespd_+v(0)),
+                                      std::abs(dilatational_wavespd_+v(1)),
+                                      std::abs(dilatational_wavespd_+v(2))}));
     }
+    *dt = param_.solver_param.CFL*dt_new;
 }
 
-void MPMDriver::AdvanceOneTimeStep(double dt) {
+void MPMDriver::AdvanceOneTimeStep(double dt, double t) {
     using Clock = std::chrono::steady_clock;
     using Duration = std::chrono::duration<double>;
     std::chrono::time_point<Clock> start_time;
@@ -251,7 +304,28 @@ void MPMDriver::AdvanceOneTimeStep(double dt) {
 
     // Enforce boundary conditions
     start_time = Clock::now();
-    grid_.EnforceBoundaryCondition(collision_objects_);
+    // TODO(yiminlin.tri): hardcoded...
+    std::tie(sum_boundary_impulse_n_, sum_boundary_impulse_t_,
+             sum_gravity_impulse_n_, sum_gravity_impulse_t_)
+                = grid_.EnforceBoundaryCondition(collision_objects_, dt, t);
+    elapsed_time = std::chrono::duration_cast<Duration>(Clock::now()
+                                                      - start_time).count();
+    run_time_statistics_.time_enforce_bc += elapsed_time;
+
+    // std::ofstream output_impulse;
+    // output_impulse.open(param_.io_param.output_directory + "/statistics_impulse.dat",
+    //                         std::fstream::app);
+    // if (output_impulse.is_open()) {
+    //     output_impulse << t                        << std::endl;
+    //     output_impulse << sum_boundary_impulse_n_  << std::endl;
+    //     output_impulse << sum_boundary_impulse_t_  << std::endl;
+    //     output_impulse << sum_gravity_impulse_n_  << std::endl;
+    //     output_impulse << sum_gravity_impulse_t_  << std::endl;
+    // }
+
+    // Overwrite velocity field
+    start_time = Clock::now();
+    grid_.OverwriteGridVelocity(param_.physical_param.velocity_field, t);
     elapsed_time = std::chrono::duration_cast<Duration>(Clock::now()
                                                       - start_time).count();
     run_time_statistics_.time_enforce_bc += elapsed_time;

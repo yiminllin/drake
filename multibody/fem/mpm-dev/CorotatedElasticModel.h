@@ -21,6 +21,8 @@ class CorotatedElasticModel : public ElastoPlasticModel {
         return std::make_unique<CorotatedElasticModel>(*this);
     }
 
+    double CalcStrainEnergyDensity(const Matrix3<double>& FE) const final;
+
     void UpdateDeformationGradientAndCalcKirchhoffStress(
                     Matrix3<double>* tau,
                     Matrix3<double>* elastic_deformation_gradient) const final;

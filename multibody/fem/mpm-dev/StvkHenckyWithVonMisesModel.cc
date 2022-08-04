@@ -25,6 +25,9 @@ double StvkHenckyWithVonMisesModel::EvalYieldFunction(const Matrix3<double>& FE)
     return EvalYieldFunction(trial_stress_data);
 }
 
+// TODO(yiminlin.tri): do nothing
+double StvkHenckyWithVonMisesModel::CalcStrainEnergyDensity(const Matrix3<double>&) const {  return 0.0; };
+
 void StvkHenckyWithVonMisesModel::
                                 UpdateDeformationGradientAndCalcKirchhoffStress(
                         Matrix3<double>* tau, Matrix3<double>* FE_trial) const {

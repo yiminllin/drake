@@ -70,6 +70,9 @@ class StvkHenckyWithVonMisesModel: public ElastoPlasticModel {
         return std::make_unique<StvkHenckyWithVonMisesModel>(*this);
     }
 
+    // TODO(yiminlin.tri): do nothing currently
+    double CalcStrainEnergyDensity(const Matrix3<double>& FE) const final;
+
     void UpdateDeformationGradientAndCalcKirchhoffStress(
             Matrix3<double>* tau,
             Matrix3<double>* trial_elastic_deformation_gradient) const final;

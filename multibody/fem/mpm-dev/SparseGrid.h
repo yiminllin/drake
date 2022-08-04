@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <functional>
 #include <limits>
 #include <unordered_map>
 #include <utility>
@@ -83,7 +84,14 @@ class SparseGrid {
     // objects. The normal of the given collision object is the outward pointing
     // normal from the interior of the object to the exterior of the object. We
     // strongly impose this Dirichlet boundary conditions.
-    void EnforceBoundaryCondition(const KinematicCollisionObjects& objects);
+    std::tuple<double, double, double, double> EnforceBoundaryCondition(
+                                    const KinematicCollisionObjects& objects, double dt, double t);
+
+    // update_velocity takes in argument (position, time, *velocity) to
+    // overwrite 'velocity' with the new velocity given position and time
+    void OverwriteGridVelocity(std::function<void(Vector3<double>,double,
+                                                  Vector3<double>*)>
+                               update_velocity, double t);
 
     // Return the sum of mass, momentum and angular momentum of all grid points
     TotalMassAndMomentum GetTotalMassAndMomentum() const;

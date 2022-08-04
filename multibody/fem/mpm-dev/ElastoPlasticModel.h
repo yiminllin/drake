@@ -20,6 +20,11 @@ class ElastoPlasticModel {
 
     virtual std::unique_ptr<ElastoPlasticModel> Clone() const = 0;
 
+    double get_lambda() const {  return lambda_;  };
+    double get_mu() const     {  return mu_;  };
+
+    virtual double CalcStrainEnergyDensity(const Matrix3<double>& FE) const = 0;
+
     // Update the elastic deformation gradient according to the plasticity model
     // by projecting the trial elastic stress to the yield surface. Then
     // calculate the projected Kirchhoff stress by the projected deformation

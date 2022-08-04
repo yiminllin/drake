@@ -219,18 +219,30 @@ void Particles::AdvectParticles(double dt) {
     }
 }
 
-TotalMassAndMomentum Particles::GetTotalMassAndMomentum() const {
+TotalMassAndMomentum Particles::GetTotalMassAndMomentum(double g) const {
     TotalMassAndMomentum sum_particles_state;
     // Particles' sum of mass and momentum
     sum_particles_state.sum_mass             = 0.0;
+    sum_particles_state.sum_kinetic_energy   = 0.0;
+    sum_particles_state.sum_strain_energy    = 0.0;
+    sum_particles_state.sum_potential_energy = 0.0;
     sum_particles_state.sum_momentum         = {0.0, 0.0, 0.0};
     sum_particles_state.sum_angular_momentum = {0.0, 0.0, 0.0};
     for (int p = 0; p < num_particles_; ++p) {
-        double mp = masses_[p];
+        double mp   = masses_[p];
+        double volp = reference_volumes_[p];
         const Vector3<double>& vp = velocities_[p];
         const Vector3<double>& xp = positions_[p];
         const Matrix3<double>& Bp = B_matrices_[p];
+        const Matrix3<double>& Fp = elastic_deformation_gradients_[p]; 
         sum_particles_state.sum_mass             += mp;
+        sum_particles_state.sum_kinetic_energy   += .5*mp*vp.dot(vp);
+        sum_particles_state.sum_strain_energy    += volp*
+                                                    elastoplastic_models_[p]
+                                                  ->CalcStrainEnergyDensity(Fp);
+        // TODO(yiminlin.tri): hardcoded, assume g is of form (0, 0, g)
+        //                     need to avoid pass by argument
+        sum_particles_state.sum_potential_energy += -mp*g*xp[2];
         sum_particles_state.sum_momentum         += mp*vp;
         sum_particles_state.sum_angular_momentum += mp*(xp.cross(vp)
                         + mathutils::ContractionWithLeviCivita(Bp.transpose()));

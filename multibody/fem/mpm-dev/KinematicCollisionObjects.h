@@ -36,7 +36,7 @@ class KinematicCollisionObjects {
     // of every collision object, ordered as in collision_objects_, to this grid
     // point.
     // TODO(yiminlin.tri): May cause unexpected behavior at sharp corners
-    void ApplyBoundaryConditions(const Vector3<double>& position,
+    bool ApplyBoundaryConditions(const Vector3<double>& position,
                                  Vector3<double>* velocity) const;
 
  private:

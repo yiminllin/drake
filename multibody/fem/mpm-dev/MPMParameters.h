@@ -17,6 +17,10 @@ class MPMParameters {
     struct PhysicalParameters {
         // Gravitational acceleration
         Vector3<double> g;
+        // Prescribed velocity field
+        std::function<void(Vector3<double>,
+                           double,
+                           Vector3<double>*)> velocity_field;
     };
 
     // @pre endtime nonnegative, dt ∈ (0, endtime]
@@ -27,6 +31,8 @@ class MPMParameters {
         double dt;
         // Grid parameters, as documented in SparseGrid Class
         double h;
+        // CFL number
+        double CFL;
     };
 
     // IO parameters. Write the output as output_directory/case_name($i).bgeo

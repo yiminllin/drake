@@ -49,7 +49,7 @@ class CollisionObject {
     // If ‖vₜ‖ <= μ‖vₙ‖,   v_new = 0.0
     // Otherwise    ,   v_new = vₜ - μ‖vₙ‖t, t - tangential direction
     // Then we overwrite the passed in velocity with v_new.
-    void ApplyBoundaryCondition(const Vector3<double>& position,
+    bool ApplyBoundaryCondition(const Vector3<double>& position,
                                 Vector3<double>* velocity) const;
 
  private:

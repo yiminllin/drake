@@ -28,12 +28,15 @@ void KinematicCollisionObjects::AdvanceOneTimeStep(double dt) {
     }
 }
 
-void KinematicCollisionObjects::ApplyBoundaryConditions(
+bool KinematicCollisionObjects::ApplyBoundaryConditions(
                                             const Vector3<double>& position,
                                             Vector3<double>* velocity) const {
+    bool applied_BC = false;
     for (const auto& obj : collision_objects_) {
-        obj->ApplyBoundaryCondition(position, velocity);
+        bool applied = obj->ApplyBoundaryCondition(position, velocity);
+        applied_BC = applied_BC || applied;
     }
+    return applied_BC;
 }
 
 }  // namespace mpm

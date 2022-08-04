@@ -13,7 +13,7 @@ load(
 load("//tools/lint:lint.bzl", "add_lint_tests")
 
 drake_cc_binary(
-    name = "oscillating_plane",
+    name = "oscillating-plane",
     srcs = [
         "examples/oscillating-plane/main.cpp",
     ],
@@ -28,9 +28,9 @@ drake_cc_binary(
 )
 
 drake_cc_binary(
-    name = "shaking_cube",
+    name = "shaking-sphere",
     srcs = [
-        "examples/shaking-cube/main.cpp",
+        "examples/shaking-sphere/main.cpp",
     ],
     deps = [
         ":CorotatedElasticModel",
@@ -43,9 +43,176 @@ drake_cc_binary(
 )
 
 drake_cc_binary(
-    name = "mpm",
+    name = "dough-rolling",
     srcs = [
-        "main.cpp",
+        "examples/dough-rolling/main.cpp",
+    ],
+    deps = [
+        ":CorotatedElasticModel",
+        ":MPMDriver",
+        ":SpatialVelocityTimeDependent",
+        ":StvkHenckyWithVonMisesModel",
+        "//common:essential",
+        "//math:geometric_transform",
+        "@partio",
+    ],
+)
+
+drake_cc_binary(
+    name = "stick-slip-transition",
+    srcs = [
+        "examples/stick-slip-transition/main.cpp",
+    ],
+    deps = [
+        ":CorotatedElasticModel",
+        ":MPMDriver",
+        ":SpatialVelocityTimeDependent",
+        "//common:essential",
+        "//math:geometric_transform",
+        "@partio",
+    ],
+)
+
+drake_cc_binary(
+    name = "twist",
+    srcs = [
+        "examples/twist/main.cpp",
+    ],
+    deps = [
+        ":CorotatedElasticModel",
+        ":MPMDriver",
+        ":SpatialVelocityTimeDependent",
+        ":StvkHenckyWithVonMisesModel",
+        "//common:essential",
+        "//math:geometric_transform",
+        "@partio",
+    ],
+)
+
+drake_cc_binary(
+    name = "slide-under-slope",
+    srcs = [
+        "examples/slide-under-slope/main.cpp",
+    ],
+    deps = [
+        ":CorotatedElasticModel",
+        ":MPMDriver",
+        ":SpatialVelocityTimeDependent",
+        "//common:essential",
+        "//math:geometric_transform",
+        "@partio",
+    ],
+)
+
+drake_cc_binary(
+    name = "advecting-ball",
+    srcs = [
+        "examples/advecting-ball/main.cpp",
+    ],
+    deps = [
+        ":CorotatedElasticModel",
+        ":MPMDriver",
+        ":SpatialVelocityTimeDependent",
+        "//common:essential",
+        "//math:geometric_transform",
+        "@partio",
+    ],
+)
+
+drake_cc_binary(
+    name = "advecting-ball-with-walls",
+    srcs = [
+        "examples/advecting-ball-with-walls/main.cpp",
+    ],
+    deps = [
+        ":CorotatedElasticModel",
+        ":MPMDriver",
+        ":SpatialVelocityTimeDependent",
+        "//common:essential",
+        "//math:geometric_transform",
+        "@partio",
+    ],
+)
+
+drake_cc_binary(
+    name = "pingpong",
+    srcs = [
+        "examples/pingpong/main.cpp",
+    ],
+    deps = [
+        ":CorotatedElasticModel",
+        ":MPMDriver",
+        ":SpatialVelocityTimeDependent",
+        "//common:essential",
+        "//math:geometric_transform",
+        "@partio",
+    ],
+)
+
+drake_cc_binary(
+    name = "colliding-sphere",
+    srcs = [
+        "examples/colliding-sphere/main.cpp",
+    ],
+    deps = [
+        ":CorotatedElasticModel",
+        ":MPMDriver",
+        ":SpatialVelocityTimeDependent",
+        "//common:essential",
+        "//math:geometric_transform",
+        "@partio",
+    ],
+)
+
+drake_cc_binary(
+    name = "rotating-sphere",
+    srcs = [
+        "examples/rotating-sphere/main.cpp",
+    ],
+    deps = [
+        ":CorotatedElasticModel",
+        ":MPMDriver",
+        ":SpatialVelocityTimeDependent",
+        "//common:essential",
+        "//math:geometric_transform",
+        "@partio",
+    ],
+)
+
+drake_cc_binary(
+    name = "compress-box",
+    srcs = [
+        "examples/compress-box/main.cpp",
+    ],
+    deps = [
+        ":CorotatedElasticModel",
+        ":MPMDriver",
+        ":SpatialVelocityTimeDependent",
+        "//common:essential",
+        "//math:geometric_transform",
+        "@partio",
+    ],
+)
+
+drake_cc_binary(
+    name = "close-boxes",
+    srcs = [
+        "examples/close-boxes/main.cpp",
+    ],
+    deps = [
+        ":CorotatedElasticModel",
+        ":MPMDriver",
+        ":SpatialVelocityTimeDependent",
+        "//common:essential",
+        "//math:geometric_transform",
+        "@partio",
+    ],
+)
+
+drake_cc_binary(
+    name = "close-wall-and-falling-box",
+    srcs = [
+        "examples/close-wall-and-falling-box/main.cpp",
     ],
     deps = [
         ":CorotatedElasticModel",

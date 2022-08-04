@@ -7,6 +7,13 @@
 *~
 .#*
 *.bak
+# Output files
+*.bgeo
+*.dat
+*.png
+*.gif
+*.hipnc
+*.mp4
 # - Directories (at top level)
 /xcode/
 /.cproject/

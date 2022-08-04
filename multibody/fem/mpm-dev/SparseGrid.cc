@@ -157,12 +157,104 @@ void SparseGrid::UpdateVelocity(double dt) {
     }
 }
 
-void SparseGrid::EnforceBoundaryCondition(
-                                    const KinematicCollisionObjects& objects) {
+std::tuple<double, double, double, double> SparseGrid::EnforceBoundaryCondition(
+                                    const KinematicCollisionObjects& objects,
+                                    double dt, double t) {
     // For all grid points, enforce frictional wall boundary condition
+    double impulse_n = 0.0;
+    double impulse_t = 0.0;
+    double impulse_gravity_n = 0.0;
+    double impulse_gravity_t = 0.0;
+    // TODO(yiminlin.tri): hardcode normal and gravity .............
+    // // For the slope case:
+    // double angle = M_PI/12;
+    // Vector3<double> wall_normal = {sin(angle), 0.0, cos(angle)};
+
+    // For the shaking sphere case:
+    Vector3<double> wall_normal = {1.0, 0.0, 0.0};
+
+    // // For the stick slip transition:
+    // Vector3<double> wall_normal = {0.0, 0.0, 1.0};
+
+    // Vector3<double> gravity = {0.0, 0.0, -9.81};
+    // double g_n_norm = gravity.dot(wall_normal);
+    // Vector3<double> g_n = g_n_norm*wall_normal;
+    // Vector3<double> g_t = gravity - g_n;
+    // double g_t_norm = g_t.norm();
+    // double g_n_norm_dt = g_n_norm*dt;
+    // double g_t_norm_dt = g_t_norm*dt;
+
+    double sum_mass = 0.0;
     for (int i = 0; i < num_active_gridpts_; ++i) {
-        objects.ApplyBoundaryConditions(get_position(active_gridpts_[i]),
-                                        &velocities_[i]);
+        double mi = masses_[i];
+        sum_mass += mi;
+        Vector3<double> prev_v = velocities_[i];
+        Vector3<double> xi = get_position(active_gridpts_[i]);
+        objects.ApplyBoundaryConditions(xi, &velocities_[i]);
+        Vector3<double> dv = velocities_[i] - prev_v;
+        double dv_n_norm = dv.dot(wall_normal);
+        Vector3<double> dv_n = dv_n_norm*wall_normal;
+        Vector3<double> dv_t = dv - dv_n;
+        // double dv_t_norm = dv_t.norm();
+        // // For others
+        // impulse_n += mi*dv_n_norm;
+        // impulse_t += mi*dv_t_norm;
+        // impulse_gravity_n += mi*g_n_norm_dt;
+        // impulse_gravity_t += mi*g_t_norm_dt;
+
+        // For the shaking sphere case
+        if (xi[0] < 0.0 && xi[2] >= 0.001) {
+            impulse_n += mi*dv_n_norm;
+            // impulse_t += mi*dv_t_norm;
+            impulse_t += mi*dv_t[2];
+            // impulse_t += mi*dv_t[2];
+        }
+    }
+
+    double freq = 0.4; // multiple of 0.04
+    static bool has_down;
+    static bool has_up;
+    static bool has_move_up;
+    if (t == dt) {
+        has_down = false;
+        has_up = false;
+        has_move_up = false;
+    }
+    if (t >= 1.36) {
+        if (static_cast<int>(trunc((t-1.36) / freq)) % 2 == 0) {
+            if (!has_down) {
+                impulse_gravity_t += 2.0*sum_mass;
+                has_down = true;
+                has_up = false;
+            }
+        } else {
+            if (!has_up) {
+                impulse_gravity_t -= 2.0*sum_mass;
+                has_up = true;
+                has_down = false;
+            }
+        }
+    }
+    // Move upward
+    if (t > 0.36 && !has_move_up) {
+        impulse_gravity_t += sum_mass*dt;
+        has_move_up = true;
+    }
+    if (t > 0.36) {
+        // impulse_gravity_n += sum_mass*g_n_norm_dt;
+        impulse_gravity_t -= -9.81*sum_mass*dt;
+    }
+
+    return std::tuple<double, double, double, double>(impulse_n, impulse_t, impulse_gravity_n, impulse_gravity_t);
+}
+
+void SparseGrid::OverwriteGridVelocity(std::function<void(Vector3<double>,
+                                                          double,
+                                                          Vector3<double>*)>
+                                       update_velocity, double t) {
+    // For all grid points, overwrite grid velocity
+    for (int i = 0; i < num_active_gridpts_; ++i) {
+        update_velocity(get_position(active_gridpts_[i]), t, &velocities_[i]);
     }
 }
 

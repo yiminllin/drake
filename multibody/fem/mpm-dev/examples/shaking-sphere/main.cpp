@@ -23,6 +23,9 @@ namespace drake {
 namespace multibody {
 namespace mpm {
 
+void velocity_field(Vector3<double>, double, Vector3<double>*) {
+}
+
 multibody::SpatialVelocity<double> left_hand_velocity(double t) {
     multibody::SpatialVelocity<double> wall_velocity;
     wall_velocity.rotational() = Vector3<double>(0.0, 0.0, 0.0);
@@ -34,8 +37,10 @@ multibody::SpatialVelocity<double> left_hand_velocity(double t) {
     } else {
         if (static_cast<int>(trunc((t-1.36) / freq)) % 2 == 0) {
             wall_velocity.translational() = Vector3<double>(0.0, 0.0, -1.0);
+            // wall_velocity.translational() = Vector3<double>(0.0, 0.0, -1.0);
         } else {
             wall_velocity.translational() = Vector3<double>(0.0, 0.0, 1.0);
+            // wall_velocity.translational() = Vector3<double>(0.0, 0.0, 1.0);
         }
     }
     return wall_velocity;
@@ -52,29 +57,35 @@ multibody::SpatialVelocity<double> right_hand_velocity(double t) {
     } else {
         if (static_cast<int>(trunc((t-1.36) / freq)) % 2 == 0) {
             wall_velocity.translational() = Vector3<double>(0.0, 0.0, -1.0);
+            // wall_velocity.translational() = Vector3<double>(0.0, 0.0, -1.0);
         } else {
             wall_velocity.translational() = Vector3<double>(0.0, 0.0, 1.0);
+            // wall_velocity.translational() = Vector3<double>(0.0, 0.0, 1.0);
         }
     }
     return wall_velocity;
 }
 
 int DoMain() {
+    double left_hand_mu = 1000.0;
+    double right_hand_mu = 1000.0;
     MPMParameters::PhysicalParameters p_param {
-        {0.0, 0.0, -9.81}                      // Gravitational acceleration
+        {0.0, 0.0, -9.81},                      // Gravitational acceleration
+        velocity_field,
     };
 
     MPMParameters::SolverParameters s_param {
         // 3e-2,                                  // End time
         4e-0,                                  // End time
-        1e-4,                                  // Time step size
-        // 0.02,                                   // Grid size
+        5e-5,                                  // Time step size
         0.02,                                   // Grid size
+        // 0.01,                                   // Grid size
+        0.75,                                   // CFL
     };
 
     MPMParameters::IOParameters io_param {
         "mpm-test",                            // case name
-        "/home/yiminlin/Desktop/output",       // output directory name
+        "/home/yiminlin/Desktop/drake/multibody/fem/mpm-dev/examples/shaking-sphere/outputs-mu1000",       // output directory name
         0.04,                                  // Interval of outputting
     };
 
@@ -102,7 +113,6 @@ int DoMain() {
     // Initialize the left wall
     std::unique_ptr<SpatialVelocityTimeDependent> left_hand_velocity_ptr =
         std::make_unique<SpatialVelocityTimeDependent>(left_hand_velocity);
-    double left_hand_mu = 0.01;
     Vector3<double> left_hand_xscale = {0.1, 0.15, 0.15};
     std::unique_ptr<AnalyticLevelSet> left_hand_level_set =
                             std::make_unique<BoxLevelSet>(left_hand_xscale);
@@ -115,7 +125,6 @@ int DoMain() {
     // Initialize the right wall
     std::unique_ptr<SpatialVelocityTimeDependent> right_hand_velocity_ptr =
         std::make_unique<SpatialVelocityTimeDependent>(right_hand_velocity);
-    double right_hand_mu = 0.01;
     Vector3<double> right_hand_xscale = {0.1, 0.15, 0.15};
     std::unique_ptr<AnalyticLevelSet> right_hand_level_set =
                             std::make_unique<BoxLevelSet>(right_hand_xscale);
@@ -141,7 +150,7 @@ int DoMain() {
             = std::make_unique<CorotatedElasticModel>(E, nu);
     MPMDriver::MaterialParameters m_param_sphere{
                                                 std::move(elastoplastic_model),
-                                                1200,
+                                                2000,
                                                 velocity_sphere,
                                                 1
                                                 };

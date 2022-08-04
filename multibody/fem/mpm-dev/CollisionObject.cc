@@ -33,7 +33,8 @@ void CollisionObject::AdvanceOneTimeStep(double dt) {
     state_.pose.set(rotation_new, translation_new);
 }
 
-void CollisionObject::ApplyBoundaryCondition(
+// TODO(yiminlin.tri): return true if applied BC
+bool CollisionObject::ApplyBoundaryCondition(
                                         const Vector3<double>& position,
                                         Vector3<double>* velocity) const {
     // Get the translational component of the relative spatial velocity at point
@@ -61,7 +62,7 @@ void CollisionObject::ApplyBoundaryCondition(
     const Vector3<double> p_RoRq_R = Rot_RW * p_RoRq_W;
 
     // Don't apply BC if the input grid point is not in the collision object
-    if (!level_set_->InInterior(p_RoRq_R)) return;
+    if (!level_set_->InInterior(p_RoRq_R)) return false;
 
     // Compute the spatial velocity at Rq for the collision object.
     const multibody::SpatialVelocity<double> V_WRq = V_WR.Shift(p_RoRq_W);
@@ -79,6 +80,7 @@ void CollisionObject::ApplyBoundaryCondition(
     v_RqQ_W = X_WR.rotation() * v_RqQ_R;
     v_WQ = v_RqQ_W + V_WRq.translational();
     *velocity = v_WQ;
+    return true;
 }
 
 void CollisionObject::UpdateVelocityCoulumbFriction(
